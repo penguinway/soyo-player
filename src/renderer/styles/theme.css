@@ -1,0 +1,66 @@
+:root {
+  /* 基础颜色 */
+  --bgColor: #252528;
+  --textColor: #ffffff;
+  --primaryColor: #5dee00;
+  --secondaryColor: #1bb017;
+  
+  /* 交互颜色 */
+  --hoverColor: #2a2a2d;
+  --borderColor: #3a3a3d;
+  --disabledColor: #666666;
+  --controlIconColor: #ffffff;
+  
+  /* 菜单颜色 */
+  --menuBgColor: #252528;
+  --menuTextColor: #878788;
+  --menuHoverColor: #2a2a2d;
+  --menuSelectedColor: #1bb017;
+}
+
+/* 全局样式 */
+body {
+  background-color: var(--bgColor);
+  color: var(--textColor);
+}
+
+/* 通用hover效果 */
+.hover-effect {
+  transition: color 0.3s ease;
+}
+
+.hover-effect:hover:not(.disabled-button) {
+  color: var(--primaryColor);
+}
+
+/* 菜单样式 */
+.menu {
+  background-color: var(--menuBgColor);
+  color: var(--menuTextColor);
+  border: 1px solid var(--borderColor);
+}
+
+.menu-item {
+  color: var(--menuTextColor);
+  transition: all 0.3s ease;
+}
+
+.menu-item:hover {
+  background-color: var(--menuHoverColor);
+  color: var(--menuSelectedColor);
+}
+
+.menu-item.selected {
+  color: var(--menuSelectedColor);
+}
+
+/* 按钮状态 */
+.disabled-button {
+  color: var(--disabledColor) !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.active-button {
+  color: var(--primaryColor) !important;
+} 

@@ -1,0 +1,116 @@
+/* 全局主题变量 */
+@primary-color: #5dee00;
+@primary-hover: #6cff0f;
+@primary-active: #4bcc00;
+@dark-bg: #1a1a1a;
+@darker-bg: #121212;
+@text-color: #ffffff;
+@text-secondary: #b0b0b0;
+@border-color: rgba(80, 80, 80, 0.5);
+@danger-color: #ff6b6b;
+@success-color: #5dee00;
+@warning-color: #ffb347;
+@info-color: #64b5f6;
+
+/* 全局动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* 全局混合 */
+.card-style() {
+  background-image: linear-gradient(to bottom, rgba(40, 40, 40, 0.9), rgba(20, 20, 20, 0.9));
+  border-radius: 8px;
+  border: 1px solid @border-color;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.button-style() {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.primary-button() {
+  .button-style();
+  background-image: linear-gradient(to bottom, @primary-color, @primary-active);
+  color: #111;
+  border: none;
+  font-weight: bold;
+  
+  &:hover {
+    background-image: linear-gradient(to bottom, @primary-hover, @primary-color);
+  }
+}
+
+.secondary-button() {
+  .button-style();
+  background-color: transparent;
+  color: @text-color;
+  border: 1px solid @border-color;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.danger-button() {
+  .button-style();
+  background-color: transparent;
+  color: @danger-color;
+  border: 1px solid @danger-color;
+  
+  &:hover {
+    background-color: rgba(255, 107, 107, 0.1);
+  }
+}
+
+.icon-button() {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: @primary-color;
+  }
+}
+
+/* 响应式断点 */
+@mobile: ~"only screen and (max-width: 767px)";
+@tablet: ~"only screen and (min-width: 768px) and (max-width: 1023px)";
+@desktop: ~"only screen and (min-width: 1024px)"; 
