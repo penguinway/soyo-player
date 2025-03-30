@@ -29,68 +29,92 @@ class MusicMetadataService {
       // 添加基本来源信息
       basicMetadata.source = '文件名解析';
 
+      // 创建一个10秒的超时Promise
+      const timeoutPromise = new Promise((timeoutResolve) => {
+        setTimeout(() => {
+          console.warn('元数据读取超时（10秒），使用基本元数据');
+          // 超时后尝试从网络获取增强元数据
+          this.enhanceMetadataFromNetwork(basicMetadata)
+            .then(enhancedMetadata => {
+              enhancedMetadata.source += ' (读取超时)';
+              timeoutResolve(enhancedMetadata);
+            })
+            .catch(() => {
+              basicMetadata.source += ' (读取超时)';
+              timeoutResolve(basicMetadata);
+            });
+        }, 10000); // 10秒超时
+      });
+
       // 使用jsmediatags读取本地元数据
-      jsmediatags.read(filePath, {
-        onSuccess: async (tag) => {
-          try {
-            // 提取本地元数据
-            const metadata = this.extractMetadata(tag, filePath);
-            
-            // 设置元数据来源为ID3标签
-            metadata.source = 'ID3标签';
-            
-            // 标记封面来源
-            if (metadata.coverImage) {
-              metadata.coverSource = '本地文件';
-            }
-            
-            // 尝试获取本地歌词
+      const metadataPromise = new Promise((metadataResolve) => {
+        jsmediatags.read(filePath, {
+          onSuccess: async (tag) => {
             try {
-              const localLyrics = await this.getLyrics(filePath);
-              if (localLyrics) {
-                metadata.lyrics = localLyrics;
-                metadata.lyricsSource = '本地LRC文件';
-              } else {
-                // 本地无歌词，尝试从网络获取
-                const networkLyrics = await this.getNetworkLyrics(metadata.title, metadata.artist);
-                if (networkLyrics) {
-                  metadata.lyrics = networkLyrics;
-                  metadata.lyricsSource = '在线API';
-                }
+              // 提取本地元数据
+              const metadata = this.extractMetadata(tag, filePath);
+              
+              // 设置元数据来源为ID3标签
+              metadata.source = 'ID3标签';
+              
+              // 标记封面来源
+              if (metadata.coverImage) {
+                metadata.coverSource = '本地文件';
               }
-            } catch (error) {
-              console.error('获取歌词失败:', error);
-            }
-            
-            // 如果没有封面，尝试从网络获取
-            if (!metadata.coverImage) {
+              
+              // 尝试获取本地歌词
               try {
-                const coverUrl = await this.getNetworkCover(metadata.title, metadata.artist);
-                if (coverUrl) {
-                  metadata.coverImage = coverUrl;
-                  metadata.coverSource = '在线API';
+                const localLyrics = await this.getLyrics(filePath);
+                if (localLyrics) {
+                  metadata.lyrics = localLyrics;
+                  metadata.lyricsSource = '本地LRC文件';
+                } else {
+                  // 本地无歌词，尝试从网络获取
+                  const networkLyrics = await this.getNetworkLyrics(metadata.title, metadata.artist);
+                  if (networkLyrics) {
+                    metadata.lyrics = networkLyrics;
+                    metadata.lyricsSource = '在线API';
+                  }
                 }
               } catch (error) {
-                console.error('获取网络封面失败:', error);
+                console.error('获取歌词失败:', error);
               }
+              
+              // 如果没有封面，尝试从网络获取
+              if (!metadata.coverImage) {
+                try {
+                  const coverUrl = await this.getNetworkCover(metadata.title, metadata.artist);
+                  if (coverUrl) {
+                    metadata.coverImage = coverUrl;
+                    metadata.coverSource = '在线API';
+                  }
+                } catch (error) {
+                  console.error('获取网络封面失败:', error);
+                }
+              }
+              
+              metadataResolve(metadata);
+            } catch (error) {
+              console.error('处理元数据失败:', error);
+              this.enhanceMetadataFromNetwork(basicMetadata)
+                .then(enhancedMetadata => metadataResolve(enhancedMetadata))
+                .catch(() => metadataResolve(basicMetadata));
             }
-            
-            resolve(metadata);
-          } catch (error) {
-            console.error('处理元数据失败:', error);
+          },
+          onError: (error) => {
+            console.error('读取音乐元数据失败:', error);
+            // 本地获取失败，尝试从网络获取增强元数据
             this.enhanceMetadataFromNetwork(basicMetadata)
-              .then(enhancedMetadata => resolve(enhancedMetadata))
-              .catch(() => resolve(basicMetadata));
+              .then(enhancedMetadata => metadataResolve(enhancedMetadata))
+              .catch(() => metadataResolve(basicMetadata));
           }
-        },
-        onError: (error) => {
-          console.error('读取音乐元数据失败:', error);
-          // 本地获取失败，尝试从网络获取增强元数据
-          this.enhanceMetadataFromNetwork(basicMetadata)
-            .then(enhancedMetadata => resolve(enhancedMetadata))
-            .catch(() => resolve(basicMetadata));
-        }
+        });
       });
+      
+      // 使用Promise.race让元数据加载与超时竞争
+      Promise.race([metadataPromise, timeoutPromise])
+        .then(result => resolve(result))
+        .catch(error => reject(error));
     });
   }
 
@@ -308,4 +332,4 @@ class MusicMetadataService {
   }
 }
 
-export default new MusicMetadataService(); 
+export default new MusicMetadataService();
