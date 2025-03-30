@@ -178,7 +178,7 @@
           </el-tab-pane>
           
           <!-- 界面设置 -->
-          <el-tab-pane :label="$t('settings.interface')" name="interface">
+          <!-- <el-tab-pane :label="$t('settings.interface')" name="interface">
             <div class="settings-section">
               <h3>{{ $t('settings.display') }}</h3>
               <div class="settings-item">
@@ -214,7 +214,7 @@
                 <el-color-picker v-model="accentColor" show-alpha></el-color-picker>
               </div>
             </div>
-          </el-tab-pane>
+          </el-tab-pane> -->
 
           <!-- 高级设置 -->
           <el-tab-pane :label="$t('settings.advanced')" name="advanced">
@@ -250,10 +250,6 @@
                 <el-switch v-model="enableLogging"></el-switch>
               </div>
               <div class="settings-item">
-                <span class="setting-label">{{ $t('settings.showDevTools') }}</span>
-                <el-switch v-model="showDevTools"></el-switch>
-              </div>
-              <div class="settings-item">
                 <span class="setting-label">{{ $t('settings.openDevTools') }}</span>
                 <button class="small-btn" @click="openDevTools">{{ $t('settings.openDevTools') }}</button>
               </div>
@@ -272,9 +268,22 @@
 <script>
 import { mapGetters, mapActions } from 'vuex';
 import connect from "../api/bus";
+import { Tabs, TabPane, Switch, Select, Option, ColorPicker, InputNumber, Input, Button, Message } from 'element-ui';
+import 'element-ui/lib/theme-chalk/index.css';
 
 export default {
   name: 'settings-modal',
+  components: {
+    'el-tabs': Tabs,
+    'el-tab-pane': TabPane,
+    'el-switch': Switch,
+    'el-select': Select,
+    'el-option': Option,
+    'el-color-picker': ColorPicker,
+    'el-input-number': InputNumber,
+    'el-input': Input,
+    'el-button': Button
+  },
   props: {
     visible: {
       type: Boolean,
@@ -334,6 +343,9 @@ export default {
       'resetShortcuts',
       'setEnableCustomShortcuts'
     ]),
+    $message(options) {
+      return Message(options);
+    },
     handleClose() {
       this.stopRecording();
       this.saveSettings();
@@ -711,4 +723,4 @@ export default {
     border-color: #5dee00;
   }
 }
-</style> 
+</style>

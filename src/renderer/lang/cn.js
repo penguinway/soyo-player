@@ -106,6 +106,9 @@ const message = {
         captureError: '截图失败，请重试',
         switchToLight: '切换到亮色',
         switchToDark:'切换到暗色',
+        time:'当前时间',
+        loading: '加载中...',
+        musicinfo: '音乐信息'
     },
     user: {
         login: '登录',
@@ -230,7 +233,22 @@ const message = {
         // 调试设置
         debug: '调试设置',
         enableLogging: '启用日志',
-        showDevTools: '显示开发者工具'
+        openDevTools: '打开开发者工具'
+    },
+    music: {
+        title: '音乐信息',
+        artist: '艺术家',
+        album: '专辑',
+        year: '年份',
+        genre: '风格',
+        fileSize: '文件大小',
+        lyrics: '歌词',
+        noLyrics: '暂无歌词',
+        unknown: '未知',
+        dataSource: '数据来源',
+        localFile: '本地文件',
+        onlineAPI: '在线API',
+        fileNameParsed: '文件名解析'
     }
 }
 

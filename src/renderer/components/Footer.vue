@@ -75,9 +75,10 @@
       <div class="right">
         <span
           v-if="isMusic && currentVideo"
-          :title="$t('common.music')"
+          :title="$t('common.musicinfo')"
           class="fa-solid fa-music hover-effect"
           :class="{'active-button': isMusic}"
+          @click="showMusicInfo"
         ></span>
         <span
           :title="$t('common.noTrace')"
@@ -94,6 +95,8 @@
         ></span>
       </div>
     </div>
+    <!-- 音乐信息弹窗组件 -->
+    <music-info :isShow="isMusicInfoVisible" :music="musicMetadata" @close="isMusicInfoVisible = false" />
   </div>
 </template>
 
@@ -106,18 +109,24 @@ import connect from "../api/bus";
 import ShortcutManager from "../api/ShortcutManager";
 import { themeManager } from '../theme';
 import ThemeSwitcher from './ThemeSwitcher.vue';
+import MusicInfo from './MusicInfo.vue';
+import MusicMetadataService from '../api/MusicMetadataService';
+
 const openDialog = new OpenDialog();
 
 export default {
   name: "elysia-footer",
   components: {
-    ThemeSwitcher
+    ThemeSwitcher,
+    MusicInfo
   },
   data() {
     return {
       isShowPlayMode: false,
       theme: themeManager.getCurrentTheme(),
-      isMusic: false
+      isMusic: false,
+      isMusicInfoVisible: false,
+      musicMetadata: {}
     };
   },
   mounted() {
@@ -133,6 +142,11 @@ export default {
     // 监听音乐状态变化
     connect.$on("musicStateChanged", (isMusicState) => {
       this.isMusic = isMusicState;
+      
+      // 当状态变为音乐时，预加载元数据
+      if (isMusicState && this.currentVideo) {
+        this.loadMusicMetadata();
+      }
     });
   },
   methods: {
@@ -370,6 +384,39 @@ export default {
     // 开启无痕模式
     noTrace() {
       this.setTrace(!this.isTrace);
+    },
+    // 显示音乐信息
+    showMusicInfo() {
+      if (!this.isMusic || !this.currentVideo) return;
+      
+      // 如果元数据未加载，需要加载
+      if (!this.musicMetadata || !this.musicMetadata.title) {
+        this.loadMusicMetadata();
+      }
+      
+      // 显示音乐信息组件
+      this.isMusicInfoVisible = true;
+    },
+    // 加载音乐元数据
+    loadMusicMetadata() {
+      if (!this.currentVideo) return;
+      
+      // 显示加载中状态
+      this.musicMetadata = { title: '加载中...' };
+      
+      // 使用MusicMetadataService获取元数据
+      MusicMetadataService.getMetadata(this.currentVideo.src)
+        .then(metadata => {
+          this.musicMetadata = metadata;
+        })
+        .catch(error => {
+          console.error('获取音乐元数据失败:', error);
+          this.musicMetadata = { 
+            title: '未知歌曲',
+            artist: '未知艺术家',
+            error: '无法加载元数据'
+          };
+        });
     }
   },
   computed: {
@@ -392,7 +439,7 @@ export default {
       if (this.playMode == 1) {
         return this.$t('common.singlePlay');
       } else if (this.playMode == 2) {
-        return tht('common.sequentialPlay');
+        return this.$t('common.singleCycle');
       } else if (this.playMode == 5) {
         return this.$t('common.randomPlay');
       }
@@ -442,6 +489,12 @@ export default {
       if (newVal.length == 0) {
         this.stop();
         this.setOldVideo(null);
+      }
+    },
+    currentVideo(newVal) {
+      // 当前视频发生变化时，如果是音乐，预加载元数据
+      if (newVal && this.isMusic) {
+        this.loadMusicMetadata();
       }
     }
   },

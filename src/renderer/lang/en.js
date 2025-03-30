@@ -106,6 +106,9 @@ const message = {
         captureError: 'Capture failed, please try again',
         switchToLight: 'Switch to Light',
         switchToDark: 'Switch to Dark',
+        time:'Time',
+        loading: 'Loading...',
+        musicinfo: 'Music Information'
     },
     user: {
         login: 'Login',
@@ -230,7 +233,22 @@ const message = {
         // Debug settings
         debug: 'Debug Settings',
         enableLogging: 'Enable Logging',
-        showDevTools: 'Show Developer Tools'
+        openDevTools: 'Open Developer Tools'
+    },
+    music: {
+        title: 'Music Information',
+        artist: 'Artist',
+        album: 'Album',
+        year: 'Year',
+        genre: 'Genre',
+        fileSize: 'File Size',
+        lyrics: 'Lyrics',
+        noLyrics: 'No lyrics available',
+        unknown: 'Unknown',
+        dataSource: 'Data Source',
+        localFile: 'Local File',
+        onlineAPI: 'Online API',
+        fileNameParsed: 'Filename Parsed'
     }
 }
 
