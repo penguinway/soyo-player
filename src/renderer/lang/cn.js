@@ -19,8 +19,11 @@ const message = {
         reset: '还原窗口'
     },
     common:{
+        noTrace: '无痕模式',
         open:'打开',
         openFile:'打开文件',
+        showLyrics: "显示歌词",
+        showCover: "显示封面",
         openFolder:'打开文件夹',
         openUrl:'打开Url',
         winRoof:'窗口置顶',
@@ -108,7 +111,11 @@ const message = {
         switchToDark:'切换到暗色',
         time:'当前时间',
         loading: '加载中...',
-        musicinfo: '音乐信息'
+        musicinfo: '音乐信息',
+        noTrace: {
+            enableConfirm: '确认开启无痕模式？开启后将不会保存播放历史。',
+            disableConfirm: '确认关闭无痕模式？关闭后将恢复保存播放历史。'
+        }
     },
     user: {
         login: '登录',
@@ -245,10 +252,8 @@ const message = {
         lyrics: '歌词',
         noLyrics: '暂无歌词',
         unknown: '未知',
-        dataSource: '数据来源',
-        localFile: '本地文件',
-        onlineAPI: '在线API',
-        fileNameParsed: '文件名解析'
+        localSource: '本地数据',
+        onlineSource: '在线数据'
     }
 }
 

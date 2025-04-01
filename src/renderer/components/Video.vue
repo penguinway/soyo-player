@@ -16,9 +16,19 @@
         'background': coverImage ? `url(${coverImage}) no-repeat center center` : `none`,
       }"
       @click="changePlayingMode"
-      v-show="isMusic && currentVideo"
+      v-show="isMusic && currentVideo && !showLyrics"
       class="music-bg"
     ></div>
+    <lyric-display
+      v-if="isMusic && currentVideo"
+      :visible="showLyrics"
+      :current-time="currentTime"
+      :lrc-content="lrcContent"
+    />
+    <div class="lyric-toggle" v-if="isMusic && currentVideo" @click="toggleLyrics">
+      <span class="fa-solid" :class="showLyrics ? 'fa-music' : 'fa-align-left'"></span>
+      <span>{{ showLyrics ? $t('common.showCover') : $t('common.showLyrics') }}</span>
+    </div>
     <div
       :style="{'color':theme.textColor,'border': `1px solid ${theme.textColor}`}"
       class="open-file"
@@ -61,6 +71,7 @@ import { log } from "util";
 import jsmediatags from "jsmediatags";
 import ShortcutManager from "../api/ShortcutManager";
 import userDB from "../api/database";
+import LyricDisplay from "./LyricDisplay.vue";
 
 const openDialog = new OpenDialog();
 
@@ -68,6 +79,9 @@ const { Menu } = remote;
 
 export default {
   name: "elysia-video",
+  components: {
+    LyricDisplay
+  },
   data() {
     return {
       // 是否显示文件菜单
@@ -88,6 +102,10 @@ export default {
       videoInfo: null,
       // 封面图片 URL
       coverImage: "",
+      // 歌词内容
+      lrcContent: "",
+      // 是否显示歌词
+      showLyrics: false,
     };
   },
   methods: {
@@ -576,6 +594,90 @@ export default {
       }
     },
     
+    // 加载歌词
+    async loadLyrics(filePath) {
+      if (!filePath || !this.isMusic) {
+        this.lrcContent = "";
+        return;
+      }
+      
+      try {
+        // 获取歌词文件路径（与音频文件同名但扩展名为.lrc）
+        const dirPath = path.dirname(filePath);
+        const baseName = path.basename(filePath, path.extname(filePath));
+        
+        // 尝试不同大小写的LRC扩展名
+        const lrcVariants = [
+          path.join(dirPath, `${baseName}.lrc`),
+          path.join(dirPath, `${baseName}.LRC`),
+          path.join(dirPath, `${baseName}.Lrc`)
+        ];
+        
+        // 检查所有可能的LRC文件路径
+        for (const lrcPath of lrcVariants) {
+          if (fs.existsSync(lrcPath)) {
+            try {
+              // 尝试使用UTF-8编码读取
+              const content = fs.readFileSync(lrcPath, 'utf-8');
+              this.lrcContent = content;
+              console.log('已加载本地歌词文件');
+              return;
+            } catch (encodingError) {
+              console.warn('UTF-8编码读取失败，尝试其他编码:', encodingError.message);
+              try {
+                // 如果UTF-8失败，尝试使用GBK/GB18030编码
+                const iconv = require('iconv-lite');
+                const buffer = fs.readFileSync(lrcPath);
+                const content = iconv.decode(buffer, 'gbk');
+                this.lrcContent = content;
+                console.log('已加载本地歌词文件(GBK编码)');
+                return;
+              } catch (gbkError) {
+                console.error('GBK编码读取也失败:', gbkError.message);
+              }
+            }
+          }
+        }
+        
+        // 如果没有找到本地歌词文件，尝试从网络获取
+        console.log('未找到本地歌词文件，尝试从网络获取');
+        
+        // 从文件名中提取歌曲标题和艺术家信息
+        let title = baseName;
+        let artist = '';
+        
+        // 尝试从文件名中分离艺术家和标题（常见格式：艺术家 - 标题）
+        const nameMatch = baseName.match(/(.+)\s*-\s*(.+)/);
+        if (nameMatch) {
+          artist = nameMatch[1].trim();
+          title = nameMatch[2].trim();
+        }
+        
+        // 导入MusicMetadataService
+        const metadataService = require('../api/MusicMetadataService').default;
+        
+        // 尝试获取在线歌词
+        const lyricsInfo = await metadataService.getOnlineLyrics(title, artist);
+        if (lyricsInfo && lyricsInfo.lyrics) {
+          this.lrcContent = lyricsInfo.lyrics;
+          console.log('已加载在线歌词');
+          return;
+        }
+        
+        // 如果在线歌词也获取失败，设置为空
+        console.log('在线歌词获取失败');
+        this.lrcContent = "";
+      } catch (error) {
+        console.error('加载歌词失败:', error);
+        this.lrcContent = "";
+      }
+    },
+    
+    // 切换歌词/封面显示
+    toggleLyrics() {
+      this.showLyrics = !this.showLyrics;
+    },
+    
     // 截取当前视频帧
     captureVideoFrame() {
       if (!this.currentVideo || !this.dp || this.isMusic) {
@@ -728,24 +830,32 @@ export default {
             console.log("extname: ", extname);
             this.isMusic = musicSuffix.includes(extname);
             console.log("isMusic: ", this.isMusic);
-            // 如果是音乐文件，加载封面
-            const loadCoverImage = async () => {
-                // 如果是音乐文件，加载封面
+            // 如果是音乐文件，加载封面和歌词
+            const loadMusicData = async () => {
+                // 如果是音乐文件，加载封面和歌词
                 if (this.isMusic) {
                   try {
                     const file = newVal.mode === "local" ? newVal.src : newVal.src;
-                    const imageUrl = await this.getAudioCover(file); // 使用 await
+                    // 加载封面
+                    const imageUrl = await this.getAudioCover(file);
                     this.coverImage = imageUrl || require("../assets/musicBg.jpg");
                     console.log("coverImage: ", this.coverImage);
-                    } catch (error) {
-                      console.error("Failed to load cover:", error);
-                      this.coverImage = require("../assets/musicBg.jpg");
-                    }
-                    } else {
-                      this.coverImage = ""; // 不是音乐文件，清空封面
-                    }
-                };
-            loadCoverImage();
+                    
+                    // 加载歌词
+                    this.loadLyrics(file);
+                    
+                  } catch (error) {
+                    console.error("Failed to load music data:", error);
+                    this.coverImage = require("../assets/musicBg.jpg");
+                    this.lrcContent = "";
+                  }
+                } else {
+                  this.coverImage = ""; // 不是音乐文件，清空封面
+                  this.lrcContent = ""; // 清空歌词
+                  this.showLyrics = false; // 隐藏歌词显示
+                }
+            };
+            loadMusicData();
             // 切换视频,校验文件是本地文件还是网络文件
             let url;
             console.log("Video mode:", newVal.mode);
@@ -840,6 +950,28 @@ export default {
     left: 10px;
     z-index: 10;
     color: #ffffff;
+  }
+  .lyric-toggle {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+    
+    span:first-child {
+      margin-right: 5px;
+    }
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
   }
 }
 .my-video {

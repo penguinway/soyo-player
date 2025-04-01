@@ -19,8 +19,11 @@ const message = {
         reset:'Reset'
     },
     common:{
+        noTrace: 'No Trace Mode',
         open:'Open',
         openFile:'Open File',
+        showLyrics: 'Show Lyrics',
+        showCover: 'Show Cover',
         openFolder:'Open Folder',
         openUrl:'Open Url',
         winRoof:'Roof',
@@ -108,7 +111,11 @@ const message = {
         switchToDark: 'Switch to Dark',
         time:'Time',
         loading: 'Loading...',
-        musicinfo: 'Music Information'
+        musicinfo: 'Music Information',
+        noTrace: {
+            enableConfirm: 'Enable No Trace Mode? Playback history will not be saved when enabled.',
+            disableConfirm: 'Disable No Trace Mode? Playback history will be saved when disabled.'
+        }
     },
     user: {
         login: 'Login',
@@ -245,10 +252,8 @@ const message = {
         lyrics: 'Lyrics',
         noLyrics: 'No lyrics available',
         unknown: 'Unknown',
-        dataSource: 'Data Source',
-        localFile: 'Local File',
-        onlineAPI: 'Online API',
-        fileNameParsed: 'Filename Parsed'
+        localSource: 'Local Data',
+        onlineSource: 'Online Data'
     }
 }
 
