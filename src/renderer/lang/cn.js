@@ -19,7 +19,7 @@ const message = {
         reset: '还原窗口'
     },
     common:{
-        noTrace: '无痕模式',
+        noTraceMode: '无痕模式',
         open:'打开',
         openFile:'打开文件',
         showLyrics: "显示歌词",
@@ -46,7 +46,6 @@ const message = {
         previous:'上一个',
         play:'播放',
         suspend:'暂停',
-        noTrace:'无痕模式',
         fullScreen:'全屏',
         exitScreen:'退出全屏',
         volume:'音量',

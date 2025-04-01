@@ -81,9 +81,9 @@
           @click="showMusicInfo"
         ></span>
         <span
-          :title="$t('common.noTrace')"
+          :title="$t('common.noTraceMode')"
           class="fa-solid fa-ghost hover-effect"
-          :class="{'active-button': !isTrace}"
+          :class="{'active-button': isTrace}"
           @click="noTrace"
         ></span>
         <theme-switcher />
@@ -383,7 +383,23 @@ export default {
     },
     // 开启无痕模式
     noTrace() {
-      this.setTrace(!this.isTrace);
+      const currentState = this.isTrace;
+      const newState = !currentState;
+      const title = this.$t('common.tip');
+      const message = newState 
+        ? this.$t('common.noTrace.enableConfirm') 
+        : this.$t('common.noTrace.disableConfirm');
+      
+      this.$confirm(message, title, {
+        confirmButtonText: this.$t('common.ok'),
+        cancelButtonText: this.$t('common.cancel'),
+        type: 'warning'
+      }).then(() => {
+        // 用户确认，切换无痕模式状态
+        this.setTrace(newState);
+      }).catch(() => {
+        // 用户取消，不做任何操作
+      });
     },
     // 显示音乐信息
     showMusicInfo() {

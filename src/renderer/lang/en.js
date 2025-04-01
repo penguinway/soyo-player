@@ -19,7 +19,7 @@ const message = {
         reset:'Reset'
     },
     common:{
-        noTrace: 'No Trace Mode',
+        noTraceMode: 'No Trace Mode',
         open:'Open',
         openFile:'Open File',
         showLyrics: 'Show Lyrics',
@@ -46,7 +46,6 @@ const message = {
         previous:'previous',
         play:'play',
         suspend:'suspend',
-        noTrace:'No Trace',
         fullScreen:'Full Screen',
         exitScreen:'Exit Screen',
         volume:'Volume',
