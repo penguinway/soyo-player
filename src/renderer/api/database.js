@@ -84,6 +84,19 @@ function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // 创建用户设置表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      setting_key TEXT NOT NULL,
+      setting_value TEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(user_id, setting_key)
+    )
+  `);
 }
 
 // 生成随机盐值
@@ -330,6 +343,43 @@ function getAudioHistory(userId, limit = 20) {
   }
 }
 
+// 获取用户设置
+function getUserSettings(userId, settingKey) {
+  try {
+    const setting = db.prepare('SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?')
+      .get(userId, settingKey);
+    return setting ? setting.setting_value : null;
+  } catch (error) {
+    console.error('获取用户设置失败:', error);
+    return null;
+  }
+}
+
+// 更新用户设置
+function updateUserSetting(userId, settingKey, settingValue) {
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO user_settings 
+      (user_id, setting_key, setting_value) 
+      VALUES (?, ?, ?)
+    `).run(userId, settingKey, settingValue);
+    return true;
+  } catch (error) {
+    console.error('更新用户设置失败:', error);
+    return false;
+  }
+}
+
+// 获取用户所有设置
+function getAllUserSettings(userId) {
+  try {
+    return db.prepare('SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?').all(userId);
+  } catch (error) {
+    console.error('获取用户所有设置失败:', error);
+    return [];
+  }
+}
+
 // 导出数据库操作方法
 module.exports = {
   registerUser,
@@ -340,5 +390,8 @@ module.exports = {
   saveVideoHistory,
   saveAudioHistory,
   getVideoHistory,
-  getAudioHistory
+  getAudioHistory,
+  getUserSettings,
+  updateUserSetting,
+  getAllUserSettings
 };

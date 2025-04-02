@@ -140,7 +140,9 @@ const message = {
         haveAccount: '已有账号？',
         noAccount: '没有账号？',
         profile: '用户信息',
-        memberSince: '注册时间'
+        memberSince: '注册时间',
+        userInfo: '用户信息',
+        userSince: '用户注册时间',
     },
     login: {
         title: '用户登录',

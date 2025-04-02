@@ -140,7 +140,9 @@ const message = {
         haveAccount: 'Already have an account?',
         noAccount: 'Don\'t have an account?',
         profile: 'User Profile',
-        memberSince: 'Member since'
+        memberSince: 'Member since',
+        userInfo: 'User Information',
+        userSince: 'User Since'
     },
     login: {
         title: 'User Login',
