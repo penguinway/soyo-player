@@ -6,6 +6,11 @@
     <div ref="video" class="video" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
       <my-video />
       <play-list :play-list-height="playListHeight" :is-show-arrow="isShowArrow" />
+      
+      <!-- 音乐标签管理面板 -->
+      <div v-if="showMusicLabels" class="music-labels-container">
+        <music-labels />
+      </div>
     </div>
     <div :class="{'footer-fullScreen':isFullScreen}" ref="footer" class="app-footer">
       <my-footer />
@@ -21,6 +26,7 @@ import { mapGetters, mapMutations } from "vuex";
 import Mousetrap from "mousetrap";
 import path from "path";
 import fs from "fs";
+import { ipcRenderer } from "electron";
 
 import OpenDialog from "./api/OpenDialog";
 import WindowUtil from "./api/window";
@@ -36,7 +42,8 @@ export default {
   data() {
     return {
       isShowArrow: false,
-      playListHeight: null
+      playListHeight: null,
+      showMusicLabels: false
     };
   },
   mounted() {
@@ -53,6 +60,13 @@ export default {
     };
     // 释放文件
     video.addEventListener("drop", this.onDrop);
+    
+    // 接收主进程发来的显示/隐藏音乐标签的消息
+    ipcRenderer.on('toggleMusicLabels', () => {
+      this.showMusicLabels = !this.showMusicLabels;
+      // 通知组件状态变化
+      connect.$emit('musicLabelsStateChanged', this.showMusicLabels);
+    });
   },
   methods: {
     ...mapMutations([
@@ -242,7 +256,9 @@ export default {
       "inWidth",
       "speed",
       "isAlwaysOnTop",
-      "theme"
+      "theme",
+      "isLoggedIn",
+      "currentUser"
     ])
   },
   watch: {
@@ -277,6 +293,22 @@ export default {
         this.$refs.app.removeEventListener("mousemove", this.onMouseMove);
         this.showFooterAndHeader();
       }
+    },
+    // 监听登录状态变化
+    isLoggedIn(newVal) {
+      console.log('登录状态变化:', newVal ? '已登录' : '未登录');
+      // 通知组件登录状态变化
+      connect.$emit('loginStateChanged', newVal);
+    },
+    // 监听当前用户信息变化
+    currentUser(newVal) {
+      if (newVal) {
+        console.log('当前用户已更新:', newVal.username);
+      } else {
+        console.log('当前用户已清空');
+      }
+      // 通知组件用户信息变化
+      connect.$emit('userInfoChanged', newVal);
     }
   },
   beforeDestroy() {
@@ -288,6 +320,9 @@ export default {
     }
     window.removeEventListener("resize", this.initialInputHeight);
     this.$refs.app.removeEventListener("mousemove", this.onMouseMove);
+    
+    // 移除事件监听
+    ipcRenderer.removeListener('toggleMusicLabels');
   }
 };
 </script>
@@ -329,6 +364,19 @@ export default {
     bottom: 0;
     left: 0;
     width: 100%;
+  }
+  
+  /* 音乐标签管理面板样式 */
+  .music-labels-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
   }
 }
 </style>

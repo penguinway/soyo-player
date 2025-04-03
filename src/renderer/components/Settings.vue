@@ -343,7 +343,7 @@ export default {
       'resetShortcuts',
       'setEnableCustomShortcuts'
     ]),
-    $message(options) {
+    showMessage(options) {
       return Message(options);
     },
     handleClose() {
@@ -390,7 +390,7 @@ export default {
         connect.$emit('settingsUpdated', settings);
       } catch (error) {
         console.error('Failed to save settings:', error);
-        this.$message({
+        this.showMessage({
           message: this.$t('settings.saveError'),
           type: 'error'
         });
@@ -401,13 +401,13 @@ export default {
         // 这里添加清除缓存的逻辑
         await connect.$emit('clearCache');
         this.cacheSize = '0 MB';
-        this.$message({
+        this.showMessage({
           message: this.$t('settings.cacheCleared'),
           type: 'success'
         });
       } catch (error) {
         console.error('Failed to clear cache:', error);
-        this.$message({
+        this.showMessage({
           message: this.$t('settings.clearCacheError'),
           type: 'error'
         });
@@ -450,7 +450,7 @@ export default {
       
       const conflictAction = this.checkConflict(key);
       if (conflictAction) {
-        this.$message({
+        this.showMessage({
           message: this.$t('shortcuts.conflict', { action: this.$t(`shortcuts.${conflictAction}`) }),
           type: 'warning'
         });
@@ -495,7 +495,7 @@ export default {
     },
     resetAllShortcuts() {
       this.resetShortcuts();
-      this.$message({
+      this.showMessage({
         message: this.$t('shortcuts.resetSuccess'),
         type: 'success'
       });
@@ -509,7 +509,7 @@ export default {
     openDevTools() {
       const { ipcRenderer } = require('electron');
       ipcRenderer.send('open-dev-tools');
-      this.$message({
+      this.showMessage({
         message: this.$t('settings.devToolsOpened'),
         type: 'success'
       });

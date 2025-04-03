@@ -58,67 +58,67 @@ function createWindow() {
 
     mainWindow.loadURL(winURL)
 
-    // 在窗口加载完成后启动Python打包程序
-    mainWindow.webContents.on('did-finish-load', () => {
-        // 确保之前的Python进程已关闭
-        cleanupPythonProcess()
+    // // 在窗口加载完成后启动Python打包程序
+    // mainWindow.webContents.on('did-finish-load', () => {
+    //     // 确保之前的Python进程已关闭
+    //     cleanupPythonProcess()
         
-        // 根据环境确定可执行文件路径
-        let exePath
-        if (process.env.NODE_ENV === 'development') {
-            // 开发环境下的路径
-            exePath = path.join(__dirname, '../../backend/dist/main.exe')
-        } else {
-            // 生产环境下的路径
-            exePath = path.join(process.resourcesPath, 'backend/dist/main.exe')
-        }
+    //     // 根据环境确定可执行文件路径
+    //     let exePath
+    //     if (process.env.NODE_ENV === 'development') {
+    //         // 开发环境下的路径
+    //         exePath = path.join(__dirname, '../../backend/dist/main.exe')
+    //     } else {
+    //         // 生产环境下的路径
+    //         exePath = path.join(process.resourcesPath, 'backend/dist/main.exe')
+    //     }
         
-        console.log('启动Python程序，路径：', exePath)
+    //     console.log('启动Python程序，路径：', exePath)
         
-        try {
-            // 启动可执行文件，并设置detached为false确保子进程随父进程退出
-            pythonProcess = spawn(exePath, [], {
-                detached: false,
-                windowsHide: true
-            })
+    //     try {
+    //         // 启动可执行文件，并设置detached为false确保子进程随父进程退出
+    //         pythonProcess = spawn(exePath, [], {
+    //             detached: false,
+    //             windowsHide: true
+    //         })
             
-            // 记录输出和错误
-            pythonProcess.stdout.on('data', (data) => {
-                console.log(`Python输出: ${data}`)
-            })
+    //         // 记录输出和错误
+    //         pythonProcess.stdout.on('data', (data) => {
+    //             console.log(`Python输出: ${data}`)
+    //         })
             
-            pythonProcess.stderr.on('data', (data) => {
-                console.error(`Python错误: ${data}`)
-            })
+    //         pythonProcess.stderr.on('data', (data) => {
+    //             console.error(`Python错误: ${data}`)
+    //         })
             
-            // 错误处理
-            pythonProcess.on('error', (err) => {
-                console.error('启动Python程序失败:', err)
-                pythonProcess = null
-            })
+    //         // 错误处理
+    //         pythonProcess.on('error', (err) => {
+    //             console.error('启动Python程序失败:', err)
+    //             pythonProcess = null
+    //         })
             
-            // 监听进程退出
-            pythonProcess.on('exit', (code, signal) => {
-                console.log(`Python进程退出，代码: ${code}, 信号: ${signal}`)
-                pythonProcess = null
-            })
-        } catch (err) {
-            console.error('启动Python程序出错:', err)
-        }
-    })
+    //         // 监听进程退出
+    //         pythonProcess.on('exit', (code, signal) => {
+    //             console.log(`Python进程退出，代码: ${code}, 信号: ${signal}`)
+    //             pythonProcess = null
+    //         })
+    //     } catch (err) {
+    //         console.error('启动Python程序出错:', err)
+    //     }
+    // })
 
-    mainWindow.on('close', () => {
-        mainWindow.webContents.send('close')
-        // 关闭Python进程
-        cleanupPythonProcess()
-    })
+    // mainWindow.on('close', () => {
+    //     mainWindow.webContents.send('close')
+    //     // 关闭Python进程
+    //     cleanupPythonProcess()
+    // })
     
-    // 因为强制关机或机器重启或会话注销而导致窗口会话结束时触发
-    mainWindow.on('session-end', () => {
-        mainWindow.webContents.send('close')
-        // 关闭Python进程
-        cleanupPythonProcess()
-    })
+    // // 因为强制关机或机器重启或会话注销而导致窗口会话结束时触发
+    // mainWindow.on('session-end', () => {
+    //     mainWindow.webContents.send('close')
+    //     // 关闭Python进程
+    //     cleanupPythonProcess()
+    // })
     
     mainWindow.on('closed', () => {
         mainWindow = null

@@ -97,6 +97,18 @@ function initDatabase() {
       UNIQUE(user_id, setting_key)
     )
   `);
+  
+  // 创建音乐标签数据库表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS music_labels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_name TEXT NOT NULL,
+      file_path TEXT NOT NULL UNIQUE,
+      style_label TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 // 生成随机盐值
@@ -380,6 +392,114 @@ function getAllUserSettings(userId) {
   }
 }
 
+/**
+ * 添加或更新音乐标签信息
+ * @param {string} fileName - 音乐文件名
+ * @param {string} filePath - 音乐文件路径
+ * @param {string} styleLabel - 风格标签，可选
+ * @returns {boolean} - 操作是否成功
+ */
+function saveMusicLabel(fileName, filePath, styleLabel = null) {
+  try {
+    // 检查是否已有该音乐文件的记录
+    const existingRecord = db.prepare('SELECT * FROM music_labels WHERE file_path = ?')
+      .get(filePath);
+    
+    if (existingRecord) {
+      // 如果文件路径相同，则什么都不做
+      return true;
+    }
+    
+    // 检查是否存在相同文件名的记录但路径不同
+    const nameRecord = db.prepare('SELECT * FROM music_labels WHERE file_name = ? AND file_path != ?')
+      .get(fileName, filePath);
+    
+    if (nameRecord) {
+      // 更新路径
+      db.prepare(`
+        UPDATE music_labels 
+        SET file_path = ?, 
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(filePath, nameRecord.id);
+      
+      // 如果风格标签为空但名称匹配的记录有标签，则不更新标签
+      return true;
+    }
+    
+    // 否则创建新记录
+    db.prepare(`
+      INSERT INTO music_labels 
+      (file_name, file_path, style_label) 
+      VALUES (?, ?, ?)
+    `).run(fileName, filePath, styleLabel);
+    
+    return true;
+  } catch (error) {
+    console.error('保存音乐标签信息失败:', error);
+    return false;
+  }
+}
+
+/**
+ * 获取音乐文件的标签信息
+ * @param {string} filePath - 音乐文件路径
+ * @returns {Object|null} - 标签信息或null
+ */
+function getMusicLabel(filePath) {
+  try {
+    const record = db.prepare('SELECT * FROM music_labels WHERE file_path = ?')
+      .get(filePath);
+    
+    return record || null;
+  } catch (error) {
+    console.error('获取音乐标签信息失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 更新音乐文件的风格标签
+ * @param {string} filePath - 音乐文件路径
+ * @param {string} styleLabel - 风格标签
+ * @returns {boolean} - 操作是否成功
+ */
+function updateMusicStyleLabel(filePath, styleLabel) {
+  try {
+    const result = db.prepare(`
+      UPDATE music_labels 
+      SET style_label = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE file_path = ?
+    `).run(styleLabel, filePath);
+    
+    return result.changes > 0;
+  } catch (error) {
+    console.error('更新音乐风格标签失败:', error);
+    return false;
+  }
+}
+
+/**
+ * 获取所有音乐标签信息
+ * @param {number} limit - 限制返回的记录数
+ * @returns {Array} - 标签信息数组
+ */
+function getAllMusicLabels(limit = 1000) {
+  try {
+    const records = db.prepare(`
+      SELECT * FROM music_labels 
+      ORDER BY updated_at DESC
+      LIMIT ?
+    `).all(limit);
+    
+    return records;
+  } catch (error) {
+    console.error('获取所有音乐标签信息失败:', error);
+    return [];
+  }
+}
+
 // 导出数据库操作方法
 module.exports = {
   registerUser,
@@ -393,5 +513,9 @@ module.exports = {
   getAudioHistory,
   getUserSettings,
   updateUserSetting,
-  getAllUserSettings
+  getAllUserSettings,
+  saveMusicLabel,
+  getMusicLabel,
+  updateMusicStyleLabel,
+  getAllMusicLabels
 };

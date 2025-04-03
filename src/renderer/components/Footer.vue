@@ -77,7 +77,6 @@
           v-if="isMusic && currentVideo"
           :title="$t('common.musicinfo')"
           class="fa-solid fa-music hover-effect"
-          :class="{'active-button': isMusic}"
           @click="showMusicInfo"
         ></span>
         <span
@@ -111,6 +110,7 @@ import { themeManager } from '../theme';
 import ThemeSwitcher from './ThemeSwitcher.vue';
 import MusicInfo from './MusicInfo.vue';
 import MusicMetadataService from '../api/MusicMetadataService';
+import path from 'path';
 
 const openDialog = new OpenDialog();
 
@@ -147,6 +147,19 @@ export default {
       if (isMusicState && this.currentVideo) {
         this.loadMusicMetadata();
       }
+    });
+    
+    // 监听音乐标签更新
+    connect.$on("musicLabelsUpdated", (labels) => {
+      if (this.musicMetadata) {
+        // 直接使用标签数组
+        this.musicMetadata.parsedLabels = labels;
+      }
+    });
+    
+    // 监听显示音乐信息事件
+    connect.$on("showMusicInfo", () => {
+      this.showMusicInfo();
     });
   },
   methods: {
@@ -414,25 +427,29 @@ export default {
       this.isMusicInfoVisible = true;
     },
     // 加载音乐元数据
-    loadMusicMetadata() {
-      if (!this.currentVideo) return;
+    async loadMusicMetadata() {
+      if (!this.currentVideo || !this.isMusic) return;
       
-      // 显示加载中状态
-      this.musicMetadata = { title: '加载中...' };
-      
-      // 使用MusicMetadataService获取元数据
-      MusicMetadataService.getMetadata(this.currentVideo.src)
-        .then(metadata => {
-          this.musicMetadata = metadata;
-        })
-        .catch(error => {
-          console.error('获取音乐元数据失败:', error);
-          this.musicMetadata = { 
-            title: '未知歌曲',
-            artist: '未知艺术家',
-            error: '无法加载元数据'
-          };
-        });
+      try {
+        // 设置加载中状态
+        this.musicMetadata = { title: '加载中...' };
+        
+        // 获取元数据服务
+        const metadataService = MusicMetadataService;
+        
+        // 获取元数据
+        const metadata = await metadataService.getMetadata(this.currentVideo.src);
+        this.musicMetadata = metadata;
+        
+        console.log('已加载音乐元数据:', metadata);
+      } catch (error) {
+        console.error('加载音乐元数据失败:', error);
+        this.musicMetadata = { 
+          title: this.currentVideo.filename || path.basename(this.currentVideo.src),
+          artist: '未知艺术家',
+          album: '未知专辑'
+        };
+      }
     }
   },
   computed: {
@@ -519,6 +536,8 @@ export default {
     connect.$off("deleteCurrentVideo");
     connect.$off("themeChanged");
     connect.$off("musicStateChanged");
+    connect.$off("musicLabelsUpdated");
+    connect.$off("showMusicInfo");
   }
 };
 </script>
@@ -583,6 +602,9 @@ export default {
       padding: 3px 0;
       border-radius: 5px;
       z-index: 1000;
+      background-color: var(--menuBgColor, #333);
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       &:after {
         content: "";
         position: absolute;
@@ -601,6 +623,7 @@ export default {
         cursor: pointer;
         &:hover {
           color: var(--menuSelectedColor);
+          background-color: rgba(255, 255, 255, 0.1);
           > span {
             color: var(--menuSelectedColor);
           }

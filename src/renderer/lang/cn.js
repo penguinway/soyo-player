@@ -254,7 +254,15 @@ const message = {
         noLyrics: '暂无歌词',
         unknown: '未知',
         localSource: '本地数据',
-        onlineSource: '在线数据'
+        onlineSource: '在线数据',
+        styleLabel: '音乐风格',
+        noLabels: '没有音乐标签',
+        getLabel: '获取标签',
+        labelUpdated: '标签更新成功',
+        labelUpdateFailed: '标签更新失败',
+        fetchLabelsFailed: '获取标签失败',
+        fileNotExist: '文件不存在',
+        
     }
 }
 

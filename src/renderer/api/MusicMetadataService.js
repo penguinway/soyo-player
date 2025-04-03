@@ -4,6 +4,7 @@ import { musicSuffix } from './util';
 import path from 'path';
 import axios from 'axios';
 import { remote } from 'electron';
+import userDB from './database';
 
 /**
  * 音乐元数据服务
@@ -23,198 +24,76 @@ class MusicMetadataService {
         return;
       }
 
-      // 获取基本元数据（从文件名和路径提取）
-      const basicMetadata = this.getBasicMetadata(filePath);
-      
-      // 添加基本来源信息
-      basicMetadata.source = '文件名解析';
-
-      // 创建一个10秒的超时Promise
-      const timeoutPromise = new Promise((timeoutResolve) => {
-        setTimeout(() => {
-          console.warn('元数据读取超时（10秒），使用基本元数据');
-          // 超时后尝试从网络获取增强元数据
-          this.enhanceMetadataFromNetwork(basicMetadata)
-            .then(enhancedMetadata => {
-              enhancedMetadata.source += ' (读取超时)';
-              timeoutResolve(enhancedMetadata);
-            })
-            .catch(() => {
-              basicMetadata.source += ' (读取超时)';
-              timeoutResolve(basicMetadata);
-            });
-        }, 10000); // 10秒超时
-      });
-
-      // 使用jsmediatags读取本地元数据
-      const metadataPromise = new Promise((metadataResolve) => {
-        jsmediatags.read(filePath, {
-          onSuccess: async (tag) => {
-            try {
-              // 提取本地元数据
-              const metadata = this.extractMetadata(tag, filePath);
-              
-              // 设置元数据来源为ID3标签
-              metadata.source = 'ID3标签';
-              
-              // 标记封面来源
-              if (metadata.coverImage) {
-                metadata.coverSource = '本地文件';
-              }
-              
-              // 尝试获取本地歌词
+      // 使用jsmediatags读取元数据
+      jsmediatags.read(filePath, {
+        onSuccess: async (tag) => {
+          try {
+            // 提取本地元数据（等待异步操作完成）
+            const metadata = await this.extractMetadata(tag, filePath);
+            
+            // 如果本地没有封面，尝试网络获取
+            if (!metadata.coverImage && metadata.title) {
               try {
-                const localLyrics = await this.getLyrics(filePath);
-                if (localLyrics) {
-                  metadata.lyrics = localLyrics;
-                  metadata.lyricsSource = '本地LRC文件';
-                } else {
-                  // 本地无歌词，尝试从网络获取
-                  const networkLyrics = await this.getNetworkLyrics(metadata.title, metadata.artist);
-                  if (networkLyrics) {
-                    metadata.lyrics = networkLyrics;
-                    metadata.lyricsSource = '在线API';
-                  }
+                const coverInfo = await this.getOnlineCover(metadata.title, metadata.artist);
+                if (coverInfo) {
+                  metadata.coverImage = coverInfo.url;
+                  metadata.coverSource = coverInfo.source;
                 }
               } catch (error) {
-                console.error('获取歌词失败:', error);
+                console.error('获取在线封面失败:', error);
               }
-              
-              // 如果没有封面，尝试从网络获取
-              if (!metadata.coverImage) {
-                try {
-                  const coverUrl = await this.getNetworkCover(metadata.title, metadata.artist);
-                  if (coverUrl) {
-                    metadata.coverImage = coverUrl;
-                    metadata.coverSource = '在线API';
-                  }
-                } catch (error) {
-                  console.error('获取网络封面失败:', error);
-                }
-              }
-              
-              metadataResolve(metadata);
-            } catch (error) {
-              console.error('处理元数据失败:', error);
-              this.enhanceMetadataFromNetwork(basicMetadata)
-                .then(enhancedMetadata => metadataResolve(enhancedMetadata))
-                .catch(() => metadataResolve(basicMetadata));
             }
-          },
-          onError: (error) => {
-            console.error('读取音乐元数据失败:', error);
-            // 本地获取失败，尝试从网络获取增强元数据
-            this.enhanceMetadataFromNetwork(basicMetadata)
-              .then(enhancedMetadata => metadataResolve(enhancedMetadata))
-              .catch(() => metadataResolve(basicMetadata));
+            
+            // 如果本地没有歌词，尝试网络获取
+            if (!metadata.lyrics && metadata.title) {
+              try {
+                const lyricsInfo = await this.getOnlineLyrics(metadata.title, metadata.artist);
+                if (lyricsInfo) {
+                  metadata.lyrics = lyricsInfo.lyrics;
+                  metadata.lyricsSource = lyricsInfo.source;
+                }
+              } catch (error) {
+                console.error('获取在线歌词失败:', error);
+              }
+            }
+            
+            resolve(metadata);
+          } catch (error) {
+            console.error('处理元数据失败:', error);
+            resolve(this.getBasicMetadata(filePath));
           }
-        });
-      });
-      
-      // 使用Promise.race让元数据加载与超时竞争
-      Promise.race([metadataPromise, timeoutPromise])
-        .then(result => resolve(result))
-        .catch(error => reject(error));
-    });
-  }
-
-  /**
-   * 从网络增强元数据
-   * @param {Object} basicMetadata - 基本元数据
-   * @returns {Promise<Object>} - 增强后的元数据
-   */
-  async enhanceMetadataFromNetwork(basicMetadata) {
-    try {
-      // 尝试从网络获取歌词
-      const lyrics = await this.getNetworkLyrics(basicMetadata.title, basicMetadata.artist);
-      if (lyrics) {
-        basicMetadata.lyrics = lyrics;
-        basicMetadata.lyricsSource = '在线API';
-      }
-      
-      // 尝试从网络获取封面
-      const coverUrl = await this.getNetworkCover(basicMetadata.title, basicMetadata.artist);
-      if (coverUrl) {
-        basicMetadata.coverImage = coverUrl;
-        basicMetadata.coverSource = '在线API';
-      }
-      
-      if (lyrics || coverUrl) {
-        basicMetadata.source = '文件名解析 + 在线API';
-      }
-      
-      return basicMetadata;
-    } catch (error) {
-      console.error('从网络增强元数据失败:', error);
-      return basicMetadata;
-    }
-  }
-
-  /**
-   * 从网络获取歌词
-   * @param {string} title - 歌曲标题
-   * @param {string} artist - 艺术家
-   * @returns {Promise<string|null>} - 歌词内容或null
-   */
-  async getNetworkLyrics(title, artist = '') {
-    try {
-      // 构建查询字符串
-      const searchTitle = artist ? `${title} - ${artist}` : title;
-      const encodedTitle = encodeURIComponent(searchTitle);
-      const url = `https://api.lrc.cx/lyrics?title=${encodedTitle}`;
-      
-      const response = await axios.get(url, {
-        responseType: 'text',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        onError: async (error) => {
+          console.error('读取音乐元数据失败:', error);
+          
+          // 获取基本元数据
+          const metadata = this.getBasicMetadata(filePath);
+          
+          // 尝试网络获取封面和歌词
+          if (metadata.title) {
+            try {
+              // 尝试获取封面
+              const coverInfo = await this.getOnlineCover(metadata.title, metadata.artist);
+              if (coverInfo) {
+                metadata.coverImage = coverInfo.url;
+                metadata.coverSource = coverInfo.source;
+              }
+              
+              // 尝试获取歌词
+              const lyricsInfo = await this.getOnlineLyrics(metadata.title, metadata.artist);
+              if (lyricsInfo) {
+                metadata.lyrics = lyricsInfo.lyrics;
+                metadata.lyricsSource = lyricsInfo.source;
+              }
+            } catch (error) {
+              console.error('获取在线元数据失败:', error);
+            }
+          }
+          
+          resolve(metadata);
         }
       });
-      
-      if (response.status === 200 && response.data) {
-        return response.data;
-      }
-      return null;
-    } catch (error) {
-      console.error('从网络获取歌词失败:', error);
-      return null;
-    }
-  }
-
-  /**
-   * 从网络获取封面
-   * @param {string} title - 歌曲标题
-   * @param {string} artist - 艺术家
-   * @returns {Promise<string|null>} - 封面URL或null
-   */
-  async getNetworkCover(title, artist = '') {
-    try {
-      // 构建查询字符串
-      const searchTitle = artist ? `${title} - ${artist}` : title;
-      const encodedTitle = encodeURIComponent(searchTitle);
-      const url = `https://api.lrc.cx/cover?title=${encodedTitle}`;
-      
-      const response = await axios.get(url, {
-        maxRedirects: 0,
-        validateStatus: status => status >= 200 && status < 400,
-        responseType: 'arraybuffer'
-      });
-      
-      // 检查是否有重定向
-      if (response.status >= 300 && response.status < 400 && response.headers.location) {
-        return response.headers.location;
-      }
-      
-      // 直接返回图片数据
-      if (response.headers['content-type'] && response.headers['content-type'].startsWith('image/')) {
-        const base64 = Buffer.from(response.data).toString('base64');
-        return `data:${response.headers['content-type']};base64,${base64}`;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('从网络获取封面失败:', error);
-      return null;
-    }
+    });
   }
 
   /**
@@ -223,7 +102,7 @@ class MusicMetadataService {
    * @param {string} filePath - 音乐文件路径
    * @returns {Object} - 格式化后的元数据
    */
-  extractMetadata(tag, filePath) {
+  async extractMetadata(tag, filePath) {
     const tags = tag.tags;
     const metadata = this.getBasicMetadata(filePath);
 
@@ -240,6 +119,28 @@ class MusicMetadataService {
       const { data, format } = tags.picture;
       const base64String = Buffer.from(data).toString('base64');
       metadata.coverImage = `data:${format};base64,${base64String}`;
+      metadata.coverSource = 'local'; // 标记封面来源为本地
+    }
+
+    // 尝试获取歌词（等待异步操作完成）
+    try {
+      const lyrics = await this.getLyrics(filePath);
+      if (lyrics) {
+        metadata.lyrics = lyrics;
+        metadata.lyricsSource = 'local'; // 标记歌词来源为本地
+      }
+    } catch (err) {
+      console.error('获取歌词失败:', err);
+    }
+    
+    // 从数据库获取风格标签信息
+    try {
+      const musicLabel = userDB.getMusicLabel(filePath);
+      if (musicLabel && musicLabel.style_label) {
+        metadata.styleLabel = musicLabel.style_label;
+      }
+    } catch (err) {
+      console.error('获取风格标签失败:', err);
     }
 
     return metadata;
@@ -277,9 +178,9 @@ class MusicMetadataService {
       lastModified: fileStats.mtime,
       coverImage: null, // 默认没有封面
       lyrics: null, // 默认没有歌词
-      source: '文件名解析',
-      lyricsSource: null,
-      coverSource: null
+      coverSource: null, // 默认没有封面来源
+      lyricsSource: null, // 默认没有歌词来源
+      styleLabel: null // 默认没有风格标签
     };
   }
 
@@ -313,22 +214,292 @@ class MusicMetadataService {
    */
   getLyrics(audioFilePath) {
     return new Promise((resolve) => {
-      // 获取同名LRC文件路径
-      const lrcPath = audioFilePath.replace(path.extname(audioFilePath), '.lrc');
-      
-      // 检查LRC文件是否存在
-      if (fs.existsSync(lrcPath)) {
-        try {
-          const content = fs.readFileSync(lrcPath, 'utf-8');
-          resolve(content);
-        } catch (error) {
-          console.error('读取歌词文件失败:', error);
-          resolve(null);
+      try {
+        console.log('开始查找歌词文件，音频路径:', audioFilePath);
+        
+        // 获取文件所在目录和文件名（不含扩展名）
+        const dirPath = path.dirname(audioFilePath);
+        const baseName = path.basename(audioFilePath, path.extname(audioFilePath));
+        const fileName = path.basename(audioFilePath);
+        
+        console.log('音频文件目录:', dirPath);
+        console.log('音频文件名(无扩展名):', baseName);
+        
+        // 尝试不同大小写的LRC扩展名
+        const lrcVariants = [
+          path.join(dirPath, `${baseName}.lrc`),
+          path.join(dirPath, `${baseName}.LRC`),
+          path.join(dirPath, `${baseName}.Lrc`)
+        ];
+        
+        // 检查所有可能的LRC文件路径
+        for (const lrcPath of lrcVariants) {
+          console.log('检查歌词文件路径:', lrcPath);
+          if (fs.existsSync(lrcPath)) {
+            console.log('找到精确匹配的歌词文件:', lrcPath);
+            try {
+              // 尝试使用UTF-8编码读取
+              const content = fs.readFileSync(lrcPath, 'utf-8');
+              resolve(content);
+              return;
+            } catch (encodingError) {
+              console.warn('UTF-8编码读取失败，尝试其他编码:', encodingError.message);
+              try {
+                // 如果UTF-8失败，尝试使用GBK/GB18030编码（常见于中文Windows系统）
+                // 注意：这需要安装iconv-lite包，如果没有安装，这里会抛出错误
+                // npm install iconv-lite --save
+                const iconv = require('iconv-lite');
+                const buffer = fs.readFileSync(lrcPath);
+                const content = iconv.decode(buffer, 'gbk');
+                console.log('使用GBK编码成功读取歌词');
+                resolve(content);
+                return;
+              } catch (gbkError) {
+                console.error('GBK编码读取也失败:', gbkError.message);
+                // 继续尝试其他文件
+              }
+            }
+          }
         }
-      } else {
+        
+        // 如果没有找到精确匹配的LRC文件，尝试在目录中查找相似文件名的LRC文件
+        if (dirPath && fs.existsSync(dirPath)) {
+          console.log('未找到精确匹配的歌词文件，尝试查找相似文件名');
+          const files = fs.readdirSync(dirPath);
+          
+          // 1. 首先尝试查找前缀匹配的LRC文件
+          const prefixMatchFiles = files.filter(file => {
+            const fileLower = file.toLowerCase();
+            return fileLower.endsWith('.lrc') && fileLower.startsWith(baseName.toLowerCase());
+          });
+          
+          if (prefixMatchFiles.length > 0) {
+            const lrcPath = path.join(dirPath, prefixMatchFiles[0]);
+            console.log('找到前缀匹配的歌词文件:', lrcPath);
+            try {
+              const content = fs.readFileSync(lrcPath, 'utf-8');
+              resolve(content);
+              return;
+            } catch (error) {
+              console.warn('UTF-8编码读取失败，尝试GBK编码');
+              try {
+                const iconv = require('iconv-lite');
+                const buffer = fs.readFileSync(lrcPath);
+                const content = iconv.decode(buffer, 'gbk');
+                resolve(content);
+                return;
+              } catch (gbkError) {
+                console.error('GBK编码读取也失败:', gbkError.message);
+              }
+            }
+          }
+          
+          // 2. 尝试查找包含音频文件名关键部分的LRC文件
+          console.log('尝试查找包含关键词的歌词文件');
+          const keywordMatchFiles = files.filter(file => {
+            const fileLower = file.toLowerCase();
+            if (!fileLower.endsWith('.lrc')) return false;
+            
+            // 提取可能的艺术家和歌曲名
+            const matches = baseName.match(/^(.*?)\s*[-–—]\s*(.*)$/);
+            if (matches && matches.length === 3) {
+              const artist = matches[1].trim().toLowerCase();
+              const title = matches[2].trim().toLowerCase();
+              
+              // 如果LRC文件名包含艺术家或歌曲名，认为是匹配的
+              return fileLower.includes(artist) || fileLower.includes(title);
+            }
+            
+            // 如果文件名相似度超过70%，也认为是匹配的
+            const similarity = this.getStringSimilarity(fileLower.replace('.lrc', ''), baseName.toLowerCase());
+            return similarity > 0.7;
+          });
+          
+          if (keywordMatchFiles.length > 0) {
+            const lrcPath = path.join(dirPath, keywordMatchFiles[0]);
+            console.log('找到关键词匹配的歌词文件:', lrcPath);
+            try {
+              const content = fs.readFileSync(lrcPath, 'utf-8');
+              resolve(content);
+              return;
+            } catch (error) {
+              console.warn('UTF-8编码读取失败，尝试GBK编码');
+              try {
+                const iconv = require('iconv-lite');
+                const buffer = fs.readFileSync(lrcPath);
+                const content = iconv.decode(buffer, 'gbk');
+                resolve(content);
+                return;
+              } catch (gbkError) {
+                console.error('GBK编码读取也失败:', gbkError.message);
+              }
+            }
+          }
+          
+          // 3. 尝试查找目录中任何LRC文件（如果只有一个）
+          const allLrcFiles = files.filter(file => file.toLowerCase().endsWith('.lrc'));
+          if (allLrcFiles.length === 1) {
+            const lrcPath = path.join(dirPath, allLrcFiles[0]);
+            console.log('目录中只有一个LRC文件，使用它:', lrcPath);
+            try {
+              const content = fs.readFileSync(lrcPath, 'utf-8');
+              resolve(content);
+              return;
+            } catch (error) {
+              console.warn('UTF-8编码读取失败，尝试GBK编码');
+              try {
+                const iconv = require('iconv-lite');
+                const buffer = fs.readFileSync(lrcPath);
+                const content = iconv.decode(buffer, 'gbk');
+                resolve(content);
+                return;
+              } catch (gbkError) {
+                console.error('GBK编码读取也失败:', gbkError.message);
+              }
+            }
+          }
+        }
+        
+        console.log('没有找到任何匹配的歌词文件');
+        resolve(null);
+      } catch (error) {
+        console.error('获取歌词文件失败:', error);
         resolve(null);
       }
     });
+  }
+  
+  /**
+   * 计算两个字符串的相似度（Levenshtein距离的归一化版本）
+   * @param {string} str1 - 第一个字符串
+   * @param {string} str2 - 第二个字符串
+   * @returns {number} - 相似度，范围0-1，1表示完全相同
+   */
+  getStringSimilarity(str1, str2) {
+    if (str1 === str2) return 1.0;
+    if (str1.length === 0) return 0.0;
+    if (str2.length === 0) return 0.0;
+    
+    // 计算Levenshtein距离
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const matrix = Array(len1 + 1).fill().map(() => Array(len2 + 1).fill(0));
+    
+    for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+    for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+    
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,      // 删除
+          matrix[i][j - 1] + 1,      // 插入
+          matrix[i - 1][j - 1] + cost // 替换
+        );
+      }
+    }
+    
+    // 归一化距离为相似度
+    const maxLen = Math.max(len1, len2);
+    return 1 - matrix[len1][len2] / maxLen;
+  }
+  
+  /**
+   * 从网络API获取歌词
+   * @param {string} title - 歌曲标题
+   * @param {string} artist - 艺术家（可选）
+   * @returns {Promise<Object|null>} - 包含歌词和来源的对象或null
+   */
+  async getOnlineLyrics(title, artist = '') {
+    try {
+      // 对标题和艺术家进行URL编码
+      const encodedTitle = encodeURIComponent(title);
+      const fullQuery = artist ? `${encodedTitle} ${encodeURIComponent(artist)}` : encodedTitle;
+      
+      // 构建API URL
+      const url = `https://api.lrc.cx/lyrics?title=${fullQuery}`;
+      
+      // 发送请求
+      const response = await axios.get(url, {
+        timeout: 5000 // 5秒超时
+      });
+      
+      // 检查响应
+      if (response.status === 200 && response.data) {
+        return {
+          lyrics: response.data,
+          source: 'online' // 标记来源为在线
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('获取在线歌词失败:', error.message);
+      return null;
+    }
+  }
+  
+  /**
+   * 从网络API获取专辑封面
+   * @param {string} title - 歌曲标题
+   * @param {string} artist - 艺术家（可选）
+   * @returns {Promise<Object|null>} - 包含封面URL和来源的对象或null
+   */
+  async getOnlineCover(title, artist = '') {
+    try {
+      // 对标题和艺术家进行URL编码
+      const encodedTitle = encodeURIComponent(title);
+      const fullQuery = artist ? `${encodedTitle} ${encodeURIComponent(artist)}` : encodedTitle;
+      
+      // 构建API URL
+      const url = `https://api.lrc.cx/cover?title=${fullQuery}`;
+      
+      // 先发送HEAD请求检查响应类型
+      const headResponse = await axios.head(url, {
+        timeout: 3000,
+        maxRedirects: 0 // 不自动跟随重定向
+      });
+      
+      // 如果有Location头，说明是重定向
+      if (headResponse.headers.location) {
+        return {
+          url: headResponse.headers.location,
+          source: 'online' // 标记来源为在线
+        };
+      }
+      
+      // 检查内容类型是否为图片
+      const contentType = headResponse.headers['content-type'];
+      if (contentType && contentType.startsWith('image/')) {
+        return {
+          url: url, // 直接返回原始URL
+          source: 'online' // 标记来源为在线
+        };
+      }
+      
+      // 如果不是重定向也不是图片，则尝试获取二进制数据并转为base64
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 5000
+      });
+      
+      if (response.status === 200) {
+        const contentType = response.headers['content-type'];
+        if (contentType && contentType.startsWith('image/')) {
+          // 将二进制数据转换为Base64
+          const base64 = Buffer.from(response.data).toString('base64');
+          return {
+            url: `data:${contentType};base64,${base64}`,
+            source: 'online' // 标记来源为在线
+          };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('获取在线专辑封面失败:', error.message);
+      return null;
+    }
   }
 }
 

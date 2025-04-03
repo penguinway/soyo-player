@@ -2,7 +2,7 @@
   <div class="theme-switcher">
     <span 
       class="theme-icon hover-effect" 
-      :title="currentTheme === 'light' ? $t('common.switchToDark') : $t('common.switchToLight')"
+      :title="currentTheme === 'light' ? $t('common.switchToLight') : $t('common.switchToDark')"
       @click="toggleTheme"
     >
       <i v-if="currentTheme === 'light'" class="fa-solid fa-moon"></i>

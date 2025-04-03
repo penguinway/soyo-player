@@ -163,6 +163,20 @@ const contextMenuTemplate = [
         type: 'separator'
     },
     {
+        label: '音乐功能',
+        submenu: [
+            {
+                label: '音乐标签管理',
+                click() {
+                    const win = BrowserWindow.getFocusedWindow();
+                    if (win) {
+                        win.webContents.send('toggleMusicLabels');
+                    }
+                },
+            }
+        ]
+    },
+    {
         label: '设置'
     },
     {

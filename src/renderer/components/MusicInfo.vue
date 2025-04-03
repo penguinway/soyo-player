@@ -14,9 +14,9 @@
         <template v-else>
           <div class="music-cover">
             <img :src="music.coverImage || require('../assets/musicBg.jpg')" alt="封面">
-            <div v-if="music.coverSource" class="source-tag">
-              <span class="fa-solid fa-circle-info"></span>
-              {{ music.coverSource }}
+            <div class="metadata-source" v-if="music.coverSource">
+              <span class="fa-solid" :class="coverSourceIcon"></span>
+              {{ coverSourceText }}
             </div>
           </div>
           <div class="music-details">
@@ -27,12 +27,23 @@
             <p class="genre" v-if="music.genre"><span>{{ $t('music.genre') }}：</span>{{ music.genre }}</p>
             <p class="fileSize" v-if="music.fileSize"><span>{{ $t('music.fileSize') }}：</span>{{ music.fileSize }}</p>
             
+            <!-- 音乐风格标签 -->
+            <div class="style-labels" v-if="parsedStyleLabels.length > 0">
+              <h3>{{ $t('music.styleLabel') }}</h3>
+              <div class="labels-container">
+                <span class="label-tag" v-for="(label, index) in parsedStyleLabels" :key="index">
+                  {{ label }}
+                </span>
+              </div>
+            </div>
+            
             <div class="lyrics" v-if="music.lyrics">
               <h3>
                 {{ $t('music.lyrics') }}
-                <small v-if="music.lyricsSource" class="source-info">
-                  ({{ music.lyricsSource }})
-                </small>
+                <span class="metadata-source-inline" v-if="music.lyricsSource">
+                  <span class="fa-solid" :class="lyricsSourceIcon"></span>
+                  {{ lyricsSourceText }}
+                </span>
               </h3>
               <div class="lyrics-content">
                 <p v-for="(line, index) in formattedLyrics" :key="index">{{ line }}</p>
@@ -41,10 +52,6 @@
             
             <div class="no-lyrics" v-else>
               <p>{{ $t('music.noLyrics') }}</p>
-            </div>
-            
-            <div class="metadata-source" v-if="music.source">
-              <p>{{ $t('music.dataSource') }}: {{ music.source }}</p>
             </div>
           </div>
         </template>
@@ -73,6 +80,50 @@ export default {
     formattedLyrics() {
       if (!this.music.lyrics) return [];
       return this.music.lyrics.split('\n');
+    },
+    // 解析风格标签
+    parsedStyleLabels() {
+      // 优先使用已解析的标签
+      if (this.music.parsedLabels && Array.isArray(this.music.parsedLabels)) {
+        return this.music.parsedLabels;
+      }
+      
+      // 尝试从styleLabel解析
+      if (this.music.styleLabel) {
+        try {
+          const labels = JSON.parse(this.music.styleLabel);
+          return Array.isArray(labels) ? labels : [];
+        } catch (e) {
+          // 如果解析失败，可能是旧格式的字符串标签
+          return this.music.styleLabel ? [this.music.styleLabel] : [];
+        }
+      }
+      
+      return [];
+    },
+    // 封面来源图标
+    coverSourceIcon() {
+      if (!this.music.coverSource) return '';
+      return this.music.coverSource === 'local' ? 'fa-hdd' : 'fa-cloud';
+    },
+    // 封面来源文本
+    coverSourceText() {
+      if (!this.music.coverSource) return '';
+      return this.music.coverSource === 'local' 
+        ? this.$t('music.localSource') 
+        : this.$t('music.onlineSource');
+    },
+    // 歌词来源图标
+    lyricsSourceIcon() {
+      if (!this.music.lyricsSource) return '';
+      return this.music.lyricsSource === 'local' ? 'fa-hdd' : 'fa-cloud';
+    },
+    // 歌词来源文本
+    lyricsSourceText() {
+      if (!this.music.lyricsSource) return '';
+      return this.music.lyricsSource === 'local' 
+        ? this.$t('music.localSource') 
+        : this.$t('music.onlineSource');
     }
   },
   methods: {
@@ -198,18 +249,19 @@ export default {
     }
   }
   
-  .source-tag {
+  .metadata-source {
     position: absolute;
     bottom: 10px;
     right: 10px;
-    background-color: rgba(0, 0, 0, 0.6);
-    color: #fff;
-    padding: 4px 8px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
     border-radius: 4px;
     font-size: 12px;
     
     span {
       margin-right: 5px;
+      font-size: 10px;
     }
   }
 }
@@ -239,31 +291,75 @@ export default {
   }
   
   .lyrics {
-    margin-top: 25px;
+    margin-top: 20px;
     
     h3 {
-      margin-bottom: 15px;
       color: var(--primaryColor);
-      font-size: 20px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .metadata-source-inline {
+      margin-left: 10px;
+      font-size: 12px;
+      background-color: rgba(0, 0, 0, 0.05);
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--secondaryTextColor);
       
-      .source-info {
-        font-size: 14px;
-        color: var(--secondaryTextColor);
-        font-weight: normal;
+      span {
+        margin-right: 5px;
+        font-size: 10px;
       }
     }
     
     .lyrics-content {
-      max-height: 250px;
+      max-height: 200px;
       overflow-y: auto;
-      padding: 15px;
+      padding: 10px;
       background-color: rgba(0, 0, 0, 0.05);
       border-radius: 8px;
-      border-left: 3px solid var(--primaryColor);
       
       p {
-        margin: 8px 0;
+        margin: 5px 0;
+        font-size: 14px;
         line-height: 1.5;
+      }
+    }
+  }
+  
+  .style-labels {
+    margin-top: 20px;
+    
+    h3 {
+      color: var(--primaryColor);
+      margin-bottom: 10px;
+    }
+    
+    .labels-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      
+      .label-tag {
+        background-color: rgba(var(--primaryColorRgb), 0.15);
+        color: var(--primaryColor);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        display: inline-block;
+        text-transform: lowercase;
+        transition: all 0.2s;
+        border: 1px solid var(--primaryColor);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+          background-color: var(--primaryColor);
+          color: white;
+        }
       }
     }
   }
@@ -275,18 +371,6 @@ export default {
     border-radius: 8px;
     text-align: center;
     color: var(--secondaryTextColor);
-  }
-  
-  .metadata-source {
-    margin-top: 25px;
-    padding: 10px 0;
-    border-top: 1px dashed var(--borderColor);
-    
-    p {
-      font-size: 14px;
-      color: var(--secondaryTextColor);
-      margin: 0;
-    }
   }
 }
 

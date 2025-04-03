@@ -29,6 +29,19 @@
       <span class="fa-solid" :class="showLyrics ? 'fa-music' : 'fa-align-left'"></span>
       <span>{{ showLyrics ? $t('common.showCover') : $t('common.showLyrics') }}</span>
     </div>
+    
+    <!-- 音乐标签展示区域 -->
+    <div class="music-tags-container" v-if="isMusic && currentVideo && musicLabels.length > 0">
+      <div class="music-tags">
+        <span class="tag" v-for="(tag, index) in musicLabels.slice(0, 3)" :key="index">
+          {{ tag }}
+        </span>
+        <span class="more-tags" v-if="musicLabels.length > 3" @click="showMusicInfo">
+          +{{ musicLabels.length - 3 }}
+        </span>
+      </div>
+    </div>
+    
     <div
       :style="{'color':theme.textColor,'border': `1px solid ${theme.textColor}`}"
       class="open-file"
@@ -72,6 +85,7 @@ import jsmediatags from "jsmediatags";
 import ShortcutManager from "../api/ShortcutManager";
 import userDB from "../api/database";
 import LyricDisplay from "./LyricDisplay.vue";
+import MusicLabelService from "../api/MusicLabelService";
 
 const openDialog = new OpenDialog();
 
@@ -106,6 +120,8 @@ export default {
       lrcContent: "",
       // 是否显示歌词
       showLyrics: false,
+      // 音乐标签数组
+      musicLabels: [],
     };
   },
   methods: {
@@ -602,6 +618,32 @@ export default {
       }
       
       try {
+        // 处理音乐文件标签信息
+        try {
+          console.log('开始处理音乐标签信息:', filePath);
+          const musicLabelInfo = await MusicLabelService.processMusicFile(filePath);
+          if (musicLabelInfo && musicLabelInfo.style_label) {
+            console.log("获取到音乐风格标签原始数据:", musicLabelInfo.style_label);
+            
+            // 尝试解析JSON格式标签
+            try {
+              const labels = JSON.parse(musicLabelInfo.style_label);
+              console.log("解析后的音乐标签数组:", labels);
+              
+              // 将标签信息传递给其他组件
+              connect.$emit("musicLabelsUpdated", labels);
+            } catch (e) {
+              // 如果不是JSON格式，按原样发送
+              console.log("非JSON格式的标签，直接使用:", musicLabelInfo.style_label);
+              connect.$emit("musicLabelsUpdated", [musicLabelInfo.style_label]);
+            }
+          } else {
+            console.log("没有获取到音乐风格标签或标签为空");
+          }
+        } catch (labelError) {
+          console.error("处理音乐标签信息失败:", labelError);
+        }
+        
         // 获取歌词文件路径（与音频文件同名但扩展名为.lrc）
         const dirPath = path.dirname(filePath);
         const baseName = path.basename(filePath, path.extname(filePath));
@@ -678,6 +720,13 @@ export default {
       this.showLyrics = !this.showLyrics;
     },
     
+    // 显示音乐信息
+    showMusicInfo() {
+      if (this.isMusic && this.currentVideo) {
+        connect.$emit("showMusicInfo");
+      }
+    },
+    
     // 截取当前视频帧
     captureVideoFrame() {
       if (!this.currentVideo || !this.dp || this.isMusic) {
@@ -736,6 +785,12 @@ export default {
         return;
       }
       this.dp.seek(this.currentTime);
+    });
+    
+    // 监听音乐标签更新事件
+    connect.$on("musicLabelsUpdated", (labels) => {
+      console.log("Video组件收到音乐标签更新:", labels);
+      this.musicLabels = labels;
     });
   },
   computed: {
@@ -936,6 +991,7 @@ export default {
     this.dp.destroy();
     this.removeListener();
     connect.$off("musicStateChanged");
+    connect.$off("musicLabelsUpdated");
   }
 };
 </script>
@@ -971,6 +1027,53 @@ export default {
     
     &:hover {
       background-color: rgba(0, 0, 0, 0.7);
+    }
+  }
+  
+  .music-tags-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10;
+    max-width: 300px;
+    
+    .music-tags {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      
+      .tag {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        margin-right: 5px;
+        white-space: nowrap;
+        transition: all 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.3);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+      }
+      
+      .more-tags {
+        font-size: 12px;
+        color: white;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 12px;
+        background-color: rgba(0, 0, 0, 0.5);
+        transition: all 0.3s;
+        
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.7);
+        }
+      }
     }
   }
 }
