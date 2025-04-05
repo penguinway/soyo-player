@@ -80,6 +80,12 @@
           @click="showMusicInfo"
         ></span>
         <span
+          v-if="isMusic && currentVideo"
+          :title="$t('common.recommend')"
+          class="fa-solid fa-lightbulb hover-effect"
+          @click="showRecommend"
+        ></span>
+        <span
           :title="$t('common.noTraceMode')"
           class="fa-solid fa-ghost hover-effect"
           :class="{'active-button': isTrace}"
@@ -96,19 +102,28 @@
     </div>
     <!-- 音乐信息弹窗组件 -->
     <music-info :isShow="isMusicInfoVisible" :music="musicMetadata" @close="isMusicInfoVisible = false" />
+    
+    <!-- 音乐推荐弹窗组件 -->
+    <music-recommend 
+      :isShow="isRecommendVisible" 
+      @close="isRecommendVisible = false" 
+      @play-song="handlePlayRecommendedSong"
+      ref="recommendComponent"
+    />
   </div>
 </template>
 
 <script>
-import { mapMutations, mapGetters } from "vuex";
+import { mapMutations, mapGetters, mapActions } from "vuex";
 import { formatTime } from "../api/util";
 import Mousetrap from "mousetrap";
 import OpenDialog from "../api/OpenDialog";
-import connect from "../api/bus";
+import connect from "../api/bus.js";
 import ShortcutManager from "../api/ShortcutManager";
 import { themeManager } from '../theme';
 import ThemeSwitcher from './ThemeSwitcher.vue';
 import MusicInfo from './MusicInfo.vue';
+import MusicRecommend from './MusicRecommend.vue';
 import MusicMetadataService from '../api/MusicMetadataService';
 import path from 'path';
 
@@ -118,7 +133,8 @@ export default {
   name: "elysia-footer",
   components: {
     ThemeSwitcher,
-    MusicInfo
+    MusicInfo,
+    MusicRecommend
   },
   data() {
     return {
@@ -126,6 +142,7 @@ export default {
       theme: themeManager.getCurrentTheme(),
       isMusic: false,
       isMusicInfoVisible: false,
+      isRecommendVisible: false,
       musicMetadata: {}
     };
   },
@@ -149,11 +166,13 @@ export default {
       }
     });
     
-    // 监听音乐标签更新
+    // 监听音乐标签更新 - 这里接收的应该已经是中文标签
     connect.$on("musicLabelsUpdated", (labels) => {
+      console.log("Footer组件收到音乐标签更新:", labels);
       if (this.musicMetadata) {
-        // 直接使用标签数组
+        // 直接使用已转换的中文标签数组
         this.musicMetadata.parsedLabels = labels;
+        console.log("Footer组件更新了音乐元数据的标签:", this.musicMetadata.parsedLabels);
       }
     });
     
@@ -425,6 +444,43 @@ export default {
       
       // 显示音乐信息组件
       this.isMusicInfoVisible = true;
+    },
+    // 显示音乐推荐
+    showRecommend() {
+      if (!this.isMusic || !this.currentVideo) return;
+      
+      // 显示推荐组件
+      this.isRecommendVisible = true;
+      
+      // 获取当前播放歌曲的文件名
+      const fileName = this.currentVideo.filename || path.basename(this.currentVideo.src);
+      
+      // 调用推荐组件的方法获取推荐
+      this.$nextTick(() => {
+        if (this.$refs.recommendComponent) {
+          this.$refs.recommendComponent.fetchRecommendations(fileName);
+        }
+      });
+    },
+    // 处理播放推荐的歌曲
+    handlePlayRecommendedSong(songName) {
+      // 在播放列表中查找匹配的歌曲
+      const songIndex = this.videoList.findIndex(item => 
+        item.filename === songName || 
+        path.basename(item.src) === songName
+      );
+      
+      if (songIndex !== -1) {
+        // 找到了匹配的歌曲，播放它
+        this.setCurrentVideoIndex(songIndex);
+        this.setPlaying(true);
+      } else {
+        // 没有找到匹配的歌曲，显示提示
+        this.$message({
+          message: this.$t('music.songNotInPlaylist'),
+          type: 'warning'
+        });
+      }
     },
     // 加载音乐元数据
     async loadMusicMetadata() {

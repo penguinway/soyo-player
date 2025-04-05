@@ -175,6 +175,14 @@
                 <el-switch v-model="hardwareAcceleration"></el-switch>
               </div>
             </div>
+            
+            <div class="settings-section">
+              <h3>{{ $t('settings.musicRecommend') }}</h3>
+              <div class="settings-item">
+                <span class="setting-label">{{ $t('settings.recommendCount') }}</span>
+                <el-input-number v-model="recommendCount" :min="1" :max="10" size="small"></el-input-number>
+              </div>
+            </div>
           </el-tab-pane>
           
           <!-- 界面设置 -->
@@ -321,7 +329,8 @@ export default {
       enableProxy: false,
       proxyAddress: '',
       enableLogging: false,
-      showDevTools: false
+      showDevTools: false,
+      recommendCount: 5
     };
   },
   computed: {
@@ -381,7 +390,8 @@ export default {
         enableProxy: this.enableProxy,
         proxyAddress: this.proxyAddress,
         enableLogging: this.enableLogging,
-        showDevTools: this.showDevTools
+        showDevTools: this.showDevTools,
+        recommendCount: this.recommendCount
       };
       
       try {

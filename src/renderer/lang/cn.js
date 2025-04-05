@@ -111,6 +111,7 @@ const message = {
         time:'当前时间',
         loading: '加载中...',
         musicinfo: '音乐信息',
+        recommend: '推荐歌曲',
         noTrace: {
             enableConfirm: '确认开启无痕模式？开启后将不会保存播放历史。',
             disableConfirm: '确认关闭无痕模式？关闭后将恢复保存播放历史。'
@@ -215,6 +216,10 @@ const message = {
         defaultQuality: '默认质量',
         hardwareAcceleration: '硬件加速',
         
+        // 音乐推荐设置
+        musicRecommend: '歌曲推荐',
+        recommendCount: '推荐歌曲数量',
+        
         // 界面显示
         display: '显示设置',
         showTime: '显示时间',
@@ -249,20 +254,37 @@ const message = {
         album: '专辑',
         year: '年份',
         genre: '风格',
-        fileSize: '文件大小',
+        duration: '时长',
+        bitrate: '比特率',
+        sampleRate: '采样率',
+        channels: '声道',
         lyrics: '歌词',
         noLyrics: '暂无歌词',
-        unknown: '未知',
-        localSource: '本地数据',
-        onlineSource: '在线数据',
-        styleLabel: '音乐风格',
-        noLabels: '没有音乐标签',
+        cover: '封面',
+        noCover: '暂无封面',
+        format: '格式',
+        fileSize: '文件大小',
+        path: '路径',
+        tags: '标签',
+        comment: '评论',
+        labels: '音乐标签管理',
+        fileName: '文件名',
+        styleLabel: '风格标签',
+        filePath: '文件路径',
+        noLabels: '未找到音乐标签',
+        playMusicToGetLabels: '播放音乐文件以获取风格标签',
+        noStyleLabel: '无风格标签',
         getLabel: '获取标签',
         labelUpdated: '标签更新成功',
         labelUpdateFailed: '标签更新失败',
-        fetchLabelsFailed: '获取标签失败',
+        fetchLabelsFailed: '获取音乐标签失败',
         fileNotExist: '文件不存在',
-        
+        similarSongs: '相似歌曲推荐',
+        basedOn: '基于歌曲',
+        noRecommendations: '暂无推荐歌曲',
+        songNotInPlaylist: '推荐的歌曲不在当前播放列表中',
+        localSource: '本地',
+        onlineSource: '在线'
     }
 }
 

@@ -111,6 +111,7 @@ const message = {
         time:'Time',
         loading: 'Loading...',
         musicinfo: 'Music Information',
+        recommend: 'Recommend Songs',
         noTrace: {
             enableConfirm: 'Enable No Trace Mode? Playback history will not be saved when enabled.',
             disableConfirm: 'Disable No Trace Mode? Playback history will be saved when disabled.'
@@ -215,6 +216,10 @@ const message = {
         defaultQuality: 'Default Quality',
         hardwareAcceleration: 'Hardware Acceleration',
         
+        // Music recommendation settings
+        musicRecommend: 'Song Recommendations',
+        recommendCount: 'Number of Recommendations',
+        
         // Interface display
         display: 'Display Settings',
         showTime: 'Show Time',
@@ -275,7 +280,13 @@ const message = {
         labelUpdated: 'Label updated successfully',
         labelUpdateFailed: 'Failed to update label',
         fetchLabelsFailed: 'Failed to fetch music labels',
-        fileNotExist: 'File does not exist'
+        fileNotExist: 'File does not exist',
+        similarSongs: 'Similar Song Recommendations',
+        basedOn: 'Based on',
+        noRecommendations: 'No recommendations available',
+        songNotInPlaylist: 'Recommended song is not in the current playlist',
+        localSource: 'Local',
+        onlineSource: 'Online'
     }
 }
 

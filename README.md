@@ -31,7 +31,6 @@ npm run build
 - [DPlayer](http://dplayer.js.org/#/zh-Hans/)：音视频播放器核心组件
 - [vue-i18n](https://github.com/kazupon/vue-i18n) : 实现国际化(中英文切换)
 - [mousetrap](https://github.com/ccampbell/mousetrap) : 实现键盘组合监听
-- [electron-updater](https://www.npmjs.com/package/electron-updater) : 实现自动更新功能
 
 ### 已实现功能
 

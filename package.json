@@ -11,6 +11,8 @@
     "build:clean": "cross-env BUILD_TARGET=clean node .electron-vue/build.js",
     "build:web": "cross-env BUILD_TARGET=web node .electron-vue/build.js",
     "build:linux": "node .electron-vue/build.js && electron-builder --linux --x64",
+    "build:backend": "node scripts/prepare-backend.js",
+    "prebuild": "npm run build:backend",
     "dev": "node .electron-vue/dev-runner.js",
     "pack": "npm run pack:main && npm run pack:renderer",
     "pack:main": "cross-env NODE_ENV=production webpack --progress --colors --config .electron-vue/webpack.main.config.js",
@@ -20,7 +22,7 @@
     "rebuild": "electron-rebuild"
   },
   "build": {
-    "productName": "soyo-player",
+    "productName": "soyo-Player",
     "appId": "soyo_player",
     "directories": {
       "output": "release"
@@ -30,8 +32,8 @@
     ],
     "extraResources": [
       {
-        "from": "backend/dist",
-        "to": "backend/dist"
+        "from": "dist/backend",
+        "to": "backend"
       }
     ],
     "dmg": {
@@ -62,13 +64,7 @@
     },
     "linux": {
       "icon": "static/icons"
-    },
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "http://127.0.0.1:5500/"
-      }
-    ]
+    }
   },
   "dependencies": {
     "axios": "^0.18.0",
@@ -80,6 +76,7 @@
     "iconv-lite": "^0.6.3",
     "jsmediatags": "^3.9.7",
     "mousetrap": "^1.6.2",
+    "python3": "^0.0.1",
     "vue": "^2.5.16",
     "vue-i18n": "^8.14.1",
     "vuex": "^3.0.1"

@@ -58,67 +58,114 @@ function createWindow() {
 
     mainWindow.loadURL(winURL)
 
-    // // 在窗口加载完成后启动Python打包程序
-    // mainWindow.webContents.on('did-finish-load', () => {
-    //     // 确保之前的Python进程已关闭
-    //     cleanupPythonProcess()
+    // 在窗口加载完成后启动Python后端
+    mainWindow.webContents.on('did-finish-load', () => {
+        // 确保之前的Python进程已关闭
+        cleanupPythonProcess()
         
-    //     // 根据环境确定可执行文件路径
-    //     let exePath
-    //     if (process.env.NODE_ENV === 'development') {
-    //         // 开发环境下的路径
-    //         exePath = path.join(__dirname, '../../backend/dist/main.exe')
-    //     } else {
-    //         // 生产环境下的路径
-    //         exePath = path.join(process.resourcesPath, 'backend/dist/main.exe')
-    //     }
+        // 获取数据库路径
+        const userDataPath = app.getPath('userData');
+        const dbPath = path.join(userDataPath, 'player.db');
         
-    //     console.log('启动Python程序，路径：', exePath)
+        console.log('启动Python程序，数据库路径：', dbPath)
         
-    //     try {
-    //         // 启动可执行文件，并设置detached为false确保子进程随父进程退出
-    //         pythonProcess = spawn(exePath, [], {
-    //             detached: false,
-    //             windowsHide: true
-    //         })
+        try {
+            // 启动Python脚本
+            let pythonPath;
+            let pythonScriptPath;
             
-    //         // 记录输出和错误
-    //         pythonProcess.stdout.on('data', (data) => {
-    //             console.log(`Python输出: ${data}`)
-    //         })
+            if (process.env.NODE_ENV === 'development') {
+                // 开发环境下的路径
+                const backendDir = path.resolve(path.join(__dirname, '../../backend'));
+                pythonScriptPath = path.join(backendDir, 'main.py');
+                pythonPath = path.join(backendDir, 'player', 'Scripts', 'python.exe');
+                
+                // 输出绝对路径用于调试
+                console.log('后端目录绝对路径:', backendDir);
+                console.log('Python脚本绝对路径:', pythonScriptPath);
+                console.log('Python解释器绝对路径:', pythonPath);
+                
+                // 检查文件是否存在
+                const fs = require('fs');
+                if (!fs.existsSync(pythonPath)) {
+                    console.error(`Python解释器不存在: ${pythonPath}`);
+                }
+                if (!fs.existsSync(pythonScriptPath)) {
+                    console.error(`Python脚本不存在: ${pythonScriptPath}`);
+                }
+            } else {
+                // 生产环境下的路径 - 从资源目录中加载
+                const resourcesDir = process.resourcesPath;
+                // 后端资源路径
+                const backendDir = path.join(resourcesDir, 'backend');
+                pythonScriptPath = path.join(backendDir, 'main.py');
+                pythonPath = path.join(backendDir, 'player', 'Scripts', 'python.exe');
+                
+                console.log('生产环境后端目录:', backendDir);
+                console.log('Python脚本路径:', pythonScriptPath);
+                console.log('Python解释器路径:', pythonPath);
+                
+                // 确保文件存在
+                try {
+                    const fs = require('fs');
+                    if (!fs.existsSync(pythonPath)) {
+                        console.error(`生产环境Python解释器不存在: ${pythonPath}`);
+                    }
+                    if (!fs.existsSync(pythonScriptPath)) {
+                        console.error(`生产环境Python脚本不存在: ${pythonScriptPath}`);
+                    }
+                } catch (err) {
+                    console.error('检查文件存在时出错:', err);
+                }
+            }
             
-    //         pythonProcess.stderr.on('data', (data) => {
-    //             console.error(`Python错误: ${data}`)
-    //         })
+            // 启动Python进程
+            pythonProcess = spawn(pythonPath, [
+                pythonScriptPath,
+                `-db_path=${dbPath}`
+            ], {
+                detached: false,
+                windowsHide: true
+            });
             
-    //         // 错误处理
-    //         pythonProcess.on('error', (err) => {
-    //             console.error('启动Python程序失败:', err)
-    //             pythonProcess = null
-    //         })
+            // 记录标准输出
+            pythonProcess.stdout.on('data', (data) => {
+                console.log(`Python输出: ${data}`);
+            });
             
-    //         // 监听进程退出
-    //         pythonProcess.on('exit', (code, signal) => {
-    //             console.log(`Python进程退出，代码: ${code}, 信号: ${signal}`)
-    //             pythonProcess = null
-    //         })
-    //     } catch (err) {
-    //         console.error('启动Python程序出错:', err)
-    //     }
-    // })
+            // 记录错误输出
+            pythonProcess.stderr.on('data', (data) => {
+                console.error(`Python错误: ${data}`);
+            });
+            
+            // 错误处理
+            pythonProcess.on('error', (err) => {
+                console.error('启动Python程序失败:', err);
+                pythonProcess = null;
+            });
+            
+            // 监听进程退出
+            pythonProcess.on('exit', (code, signal) => {
+                console.log(`Python进程退出，代码: ${code}, 信号: ${signal}`);
+                pythonProcess = null;
+            });
+        } catch (err) {
+            console.error('启动Python程序出错:', err);
+        }
+    });
 
-    // mainWindow.on('close', () => {
-    //     mainWindow.webContents.send('close')
-    //     // 关闭Python进程
-    //     cleanupPythonProcess()
-    // })
+    mainWindow.on('close', () => {
+        mainWindow.webContents.send('close')
+        // 关闭Python进程
+        cleanupPythonProcess()
+    })
     
-    // // 因为强制关机或机器重启或会话注销而导致窗口会话结束时触发
-    // mainWindow.on('session-end', () => {
-    //     mainWindow.webContents.send('close')
-    //     // 关闭Python进程
-    //     cleanupPythonProcess()
-    // })
+    // 因为强制关机或机器重启或会话注销而导致窗口会话结束时触发
+    mainWindow.on('session-end', () => {
+        mainWindow.webContents.send('close')
+        // 关闭Python进程
+        cleanupPythonProcess()
+    })
     
     mainWindow.on('closed', () => {
         mainWindow = null
