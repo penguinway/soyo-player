@@ -25,13 +25,13 @@
       :current-time="currentTime"
       :lrc-content="lrcContent"
     />
-    <div class="lyric-toggle" v-if="isMusic && currentVideo" @click="toggleLyrics">
+    <div class="lyric-toggle" v-if="isMusic && currentVideo && !isSettingsVisible" @click="toggleLyrics">
       <span class="fa-solid" :class="showLyrics ? 'fa-music' : 'fa-align-left'"></span>
       <span>{{ showLyrics ? $t('common.showCover') : $t('common.showLyrics') }}</span>
     </div>
     
     <!-- 音乐标签展示区域 -->
-    <div class="music-tags-container" v-if="isMusic && currentVideo && musicLabels.length > 0">
+    <div class="music-tags-container" v-if="isMusic && currentVideo && musicLabels.length > 0 && !isSettingsVisible">
       <div class="music-tags">
         <span class="tag" v-for="(tag, index) in musicLabels.slice(0, 3)" :key="index">
           {{ tag }}
@@ -86,6 +86,7 @@ import ShortcutManager from "../api/ShortcutManager";
 import userDB from "../api/database";
 import LyricDisplay from "./LyricDisplay.vue";
 import MusicLabelService from "../api/MusicLabelService";
+import { translateMusicLabel } from "../api/musicLabelMapping";
 
 const openDialog = new OpenDialog();
 
@@ -120,8 +121,12 @@ export default {
       lrcContent: "",
       // 是否显示歌词
       showLyrics: false,
-      // 音乐标签数组
+      // 音乐标签数组 - 原始英文标签
+      musicLabelsOriginal: [],
+      // 音乐标签数组 - 转换后的中文标签
       musicLabels: [],
+      // 是否显示设置页面
+      isSettingsVisible: false,
     };
   },
   methods: {
@@ -627,18 +632,37 @@ export default {
             
             // 尝试解析JSON格式标签
             try {
-              const labels = JSON.parse(musicLabelInfo.style_label);
-              console.log("解析后的音乐标签数组:", labels);
+              const originalLabels = JSON.parse(musicLabelInfo.style_label);
+              console.log("解析后的音乐标签数组:", originalLabels);
               
-              // 将标签信息传递给其他组件
-              connect.$emit("musicLabelsUpdated", labels);
+              // 先转换为中文标签
+              const chineseLabels = this.translateMusicLabels(originalLabels);
+              console.log("转换后的中文标签:", chineseLabels);
+              
+              // 发送中文标签到其他组件
+              connect.$emit("musicLabelsUpdated", chineseLabels);
+              
+              // 同时保存原始标签，以便后续使用
+              this.musicLabelsOriginal = originalLabels;
             } catch (e) {
-              // 如果不是JSON格式，按原样发送
-              console.log("非JSON格式的标签，直接使用:", musicLabelInfo.style_label);
-              connect.$emit("musicLabelsUpdated", [musicLabelInfo.style_label]);
+              // 如果不是JSON格式，先转换为中文，再发送
+              console.log("非JSON格式的标签，转换后使用:", musicLabelInfo.style_label);
+              const originalLabel = musicLabelInfo.style_label;
+              const chineseLabel = translateMusicLabel(originalLabel);
+              
+              // 拆分为数组并发送
+              const chineseLabels = chineseLabel.split('，').filter(Boolean);
+              connect.$emit("musicLabelsUpdated", chineseLabels);
+              
+              // 保存原始标签
+              this.musicLabelsOriginal = [originalLabel];
             }
           } else {
             console.log("没有获取到音乐风格标签或标签为空");
+            // 清空标签
+            this.musicLabelsOriginal = [];
+            this.musicLabels = [];
+            connect.$emit("musicLabelsUpdated", []);
           }
         } catch (labelError) {
           console.error("处理音乐标签信息失败:", labelError);
@@ -774,6 +798,25 @@ export default {
         });
       }
     },
+    // 转换音乐标签为中文
+    translateMusicLabels(labels) {
+      if (!labels || !Array.isArray(labels) || labels.length === 0) {
+        console.log('无标签或标签格式不正确，无需转换');
+        return [];
+      }
+      
+      console.log('开始转换音乐标签，原始标签:', labels);
+      
+      // 获取中文标签文本
+      const chineseLabelsText = translateMusicLabel(labels);
+      console.log('转换后的中文标签文本:', chineseLabelsText);
+      
+      // 将中文标签文本分割为数组
+      const chineseLabels = chineseLabelsText.split('，').filter(Boolean);
+      console.log('转换后的中文标签数组:', chineseLabels);
+      
+      return chineseLabels;
+    },
   },
   mounted() {
     window.addEventListener("click", this.onClick);
@@ -790,7 +833,17 @@ export default {
     // 监听音乐标签更新事件
     connect.$on("musicLabelsUpdated", (labels) => {
       console.log("Video组件收到音乐标签更新:", labels);
-      this.musicLabels = labels;
+      // 保存原始标签
+      this.musicLabelsOriginal = labels;
+      // 转换为中文标签
+      this.musicLabels = this.translateMusicLabels(labels);
+      console.log("转换后的中文标签:", this.musicLabels);
+    });
+    
+    // 监听设置页面显示状态变化
+    connect.$on("settingsVisibilityChanged", (isVisible) => {
+      console.log("设置页面显示状态:", isVisible);
+      this.isSettingsVisible = isVisible;
     });
   },
   computed: {
@@ -992,6 +1045,7 @@ export default {
     this.removeListener();
     connect.$off("musicStateChanged");
     connect.$off("musicLabelsUpdated");
+    connect.$off("settingsVisibilityChanged");
   }
 };
 </script>

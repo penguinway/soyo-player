@@ -16,7 +16,9 @@ const message = {
         minimize: '最小化',
         Maximization: '最大化',
         close: '关闭',
-        reset: '还原窗口'
+        reset: '还原窗口',
+        noHistory: '暂无历史记录',
+        clearHistory: '清空历史记录'
     },
     common:{
         noTraceMode: '无痕模式',
@@ -246,7 +248,8 @@ const message = {
         // 调试设置
         debug: '调试设置',
         enableLogging: '启用日志',
-        openDevTools: '打开开发者工具'
+        openDevTools: '打开开发者工具',
+        devToolsOpened: '开发者工具已打开'
     },
     music: {
         title: '音乐信息',

@@ -91,13 +91,13 @@
             <div
               class="no-history"
               v-if="historicalRecords.length == 0"
-            >暂无历史记录</div>
+            >{{$t('header.noHistory')}}</div>
             <HistoryItem :item="video" v-for="(video,index) in historicalRecords" :key="index" />
             <div
               v-if="historicalRecords.length != 0"
               @click="clearHistoricalRecords"
               class="clear-history"
-            >清空历史记录</div>
+            >{{$t('header.clearHistory')}}</div>
           </div>
         </div>
       </transition>
@@ -125,6 +125,7 @@ import WindowUtil from "../api/window";
 import { mapGetters, mapMutations } from "vuex";
 import { remote, shell } from "electron";
 import { themes } from "../api/util";
+import connect from "../api/bus";
 import Login from "./Login.vue";
 import UserInfo from "./UserInfo.vue";
 import About from "./About.vue";
@@ -178,6 +179,17 @@ export default {
     console.log('当前用户状态:', this.currentUser);
     console.log('登录框状态:', this.showLogin);
     console.log('用户信息框状态:', this.showUserInfo);
+    
+    // 监听登录状态变化和用户信息变化
+    connect.$on('loginStateChanged', (isLoggedIn) => {
+      console.log('Header收到登录状态变化:', isLoggedIn);
+      // 如果登录状态发生变化，可以在此处理一些UI逻辑
+    });
+    
+    connect.$on('userInfoChanged', (userInfo) => {
+      console.log('Header收到用户信息变化:', userInfo);
+      // 如果用户信息发生变化，可以在此处理一些UI逻辑
+    });
   },
   methods: {
     ...mapMutations([
@@ -315,19 +327,36 @@ export default {
         // 在数据库中更新登录状态
         userDB.logoutUser(this.currentUser.id);
       }
+      
+      // 更新Vuex状态
       this.setCurrentUser(null);
       this.setLoginState(false);
       
-      // 强制刷新页面以确保状态正确同步
-      console.log('登出成功，即将刷新页面...');
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // 清除localStorage中存储的状态
+      // 这样刷新页面后不会从localStorage恢复登录状态
+      const storage = require('good-storage');
+      const currentState = storage.get('state', {});
+      const updatedState = {
+        ...currentState,
+        currentUser: null,
+        isLoggedIn: false
+      };
+      storage.set('state', updatedState);
+      
+      // 不再强制刷新页面
+      console.log('登出成功，状态已更新');
     },
     // 登录成功回调
     onLoginSuccess(user) {
       console.log('登录成功，用户信息:', user);
-      this.setCurrentUser(user);
+      
+      // 确保用户信息已被更新到Vuex
+      if (!this.currentUser || this.currentUser.id !== user.id) {
+        this.setCurrentUser(user);
+        this.setLoginState(true);
+      }
+      
+      // 显示欢迎信息
       console.log(`${this.$t('user.welcome')}，${user.username}！`);
     },
     // 打开快捷键设置模态框
@@ -342,10 +371,14 @@ export default {
     // 打开设置菜单
     openSettingsMenu() {
       this.showSettings = true;
+      // 通知其他组件设置页面已显示
+      connect.$emit("settingsVisibilityChanged", true);
     },
     // 关闭设置菜单
     closeSettings() {
       this.showSettings = false;
+      // 通知其他组件设置页面已关闭
+      connect.$emit("settingsVisibilityChanged", false);
     }
   },
   computed: {
@@ -391,6 +424,10 @@ export default {
       clearInterval(this.timer);
     }
     this.removeListener();
+    
+    // 移除登录状态和用户信息变化的监听器
+    connect.$off('loginStateChanged');
+    connect.$off('userInfoChanged');
   }
 };
 </script>

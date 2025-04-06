@@ -16,7 +16,9 @@ const message = {
         minimize:'Min',
         Maximization:'Max',
         close:'Close',
-        reset:'Reset'
+        reset:'Reset',
+        noHistory:'No History',
+        clearHistory:'Clear History'
     },
     common:{
         noTraceMode: 'No Trace Mode',
@@ -246,7 +248,8 @@ const message = {
         // Debug settings
         debug: 'Debug Settings',
         enableLogging: 'Enable Logging',
-        openDevTools: 'Open Developer Tools'
+        openDevTools: 'Open Developer Tools',
+        devToolsOpened: 'Developer Tools Opened'
     },
     music: {
         title: 'Music Information',
