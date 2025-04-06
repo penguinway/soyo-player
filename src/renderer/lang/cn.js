@@ -287,7 +287,19 @@ const message = {
         noRecommendations: '暂无推荐歌曲',
         songNotInPlaylist: '推荐的歌曲不在当前播放列表中',
         localSource: '本地',
-        onlineSource: '在线'
+        onlineSource: '在线',
+        processingLabels: '正在处理音乐标签...',
+        addingToDatabase: '正在添加到数据库...',
+        labelProcessComplete: '标签处理完成',
+        batchProcessing: '批量处理中',
+        tagsAddSuccess: '已添加 {count} 首音乐到数据库',
+        tagsAddFailed: '添加音乐文件失败',
+        tagsProcessComplete: '已处理 {count} 首音乐的标签',
+        addingFiles: '正在添加文件',
+        processingFiles: '正在处理文件',
+        processingComplete: '处理完成',
+        batchAddSuccess: '批量添加成功',
+        batchProcessSuccess: '批量处理成功'
     }
 }
 

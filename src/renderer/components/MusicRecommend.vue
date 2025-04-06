@@ -100,7 +100,7 @@ export default {
         });
         
         if (!response.ok) {
-          throw new Error(`获取推荐失败: ${response.status}`);
+          throw new Error(this.$t('music.fetchLabelsFailed') + `: ${response.status}`);
         }
         
         const data = await response.json();
@@ -109,7 +109,14 @@ export default {
           this.recommendedSongs = data.recommended_songs;
         }
       } catch (error) {
-        console.error('获取推荐歌曲失败:', error);
+        console.error(this.$t('music.fetchLabelsFailed') + ':', error);
+        
+        // 显示友好的错误提示
+        connect.$emit('showTipMessage', {
+          type: 'error',
+          message: this.$t('music.fetchLabelsFailed'),
+          duration: 3000
+        });
       } finally {
         this.isLoading = false;
       }

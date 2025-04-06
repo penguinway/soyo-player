@@ -817,6 +817,19 @@ export default {
       
       return chineseLabels;
     },
+    // 处理音乐标签
+    async processMusicTag(filePath) {
+      try {
+        // 处理音乐文件标签
+        await MusicLabelService.processMusicFile(filePath);
+        console.log('已处理音乐标签:', path.basename(filePath));
+        
+        // 处理完成后静默提示，不干扰用户体验
+        // 由于每次播放都会处理，因此不显示消息弹窗
+      } catch (error) {
+        console.error('处理音乐标签失败:', error);
+      }
+    },
   },
   mounted() {
     window.addEventListener("click", this.onClick);
@@ -952,6 +965,8 @@ export default {
                     // 加载歌词
                     this.loadLyrics(file);
                     
+                    // 处理音乐标签，将文件添加到标签数据库
+                    this.processMusicTag(file);
                   } catch (error) {
                     console.error("Failed to load music data:", error);
                     this.coverImage = require("../assets/musicBg.jpg");

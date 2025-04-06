@@ -180,6 +180,9 @@ export default {
     connect.$on("showMusicInfo", () => {
       this.showMusicInfo();
     });
+    
+    // 监听显示提示消息事件
+    connect.$on('showTipMessage', this.showTipMessage);
   },
   methods: {
     ...mapMutations([
@@ -506,6 +509,16 @@ export default {
           album: '未知专辑'
         };
       }
+    },
+    // 显示提示消息
+    showTipMessage(data) {
+      if (!data || !data.message) return;
+      
+      this.$message({
+        message: data.message,
+        type: data.type || 'info',
+        duration: data.duration || 3000
+      });
     }
   },
   computed: {
@@ -594,6 +607,7 @@ export default {
     connect.$off("musicStateChanged");
     connect.$off("musicLabelsUpdated");
     connect.$off("showMusicInfo");
+    connect.$off('showTipMessage');
   }
 };
 </script>

@@ -500,6 +500,26 @@ function getAllMusicLabels(limit = 1000) {
   }
 }
 
+/**
+ * 获取所有未标记风格的音乐文件
+ * @returns {Array} - 未标记的音乐文件数组
+ */
+function getUnlabeledMusicFiles() {
+  try {
+    // 查询所有风格标签为空的音乐文件
+    const records = db.prepare(`
+      SELECT * FROM music_labels 
+      WHERE style_label IS NULL OR style_label = ''
+      ORDER BY id ASC
+    `).all();
+    
+    return records;
+  } catch (error) {
+    console.error('获取未标记音乐文件失败:', error);
+    return [];
+  }
+}
+
 // 导出数据库操作方法
 module.exports = {
   registerUser,
@@ -517,5 +537,6 @@ module.exports = {
   saveMusicLabel,
   getMusicLabel,
   updateMusicStyleLabel,
-  getAllMusicLabels
+  getAllMusicLabels,
+  getUnlabeledMusicFiles
 };

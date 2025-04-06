@@ -149,14 +149,14 @@
                 <span class="setting-label">{{ $t('settings.rememberPosition') }}</span>
                 <el-switch v-model="rememberPosition"></el-switch>
               </div>
-              <div class="settings-item">
+              <!-- <div class="settings-item">
                 <span class="setting-label">{{ $t('settings.loopPlay') }}</span>
                 <el-switch v-model="loopPlay"></el-switch>
               </div>
               <div class="settings-item">
                 <span class="setting-label">{{ $t('settings.shufflePlay') }}</span>
                 <el-switch v-model="shufflePlay"></el-switch>
-              </div>
+              </div> -->
             </div>
             
             <div class="settings-section">

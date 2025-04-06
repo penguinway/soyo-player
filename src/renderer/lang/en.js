@@ -289,7 +289,19 @@ const message = {
         noRecommendations: 'No recommendations available',
         songNotInPlaylist: 'Recommended song is not in the current playlist',
         localSource: 'Local',
-        onlineSource: 'Online'
+        onlineSource: 'Online',
+        processingLabels: 'Processing music labels...',
+        addingToDatabase: 'Adding to database...',
+        labelProcessComplete: 'Label processing complete',
+        batchProcessing: 'Batch processing',
+        tagsAddSuccess: 'Added {count} songs to database',
+        tagsAddFailed: 'Failed to add music files',
+        tagsProcessComplete: 'Processed tags for {count} songs',
+        addingFiles: 'Adding files',
+        processingFiles: 'Processing files',
+        processingComplete: 'Processing complete',
+        batchAddSuccess: 'Batch add successful',
+        batchProcessSuccess: 'Batch processing successful'
     }
 }
 
