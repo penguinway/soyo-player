@@ -3,6 +3,7 @@ import WindowUtil from './api/window'
 import OpenDialog from './api/OpenDialog'
 const { spawn } = require('child_process')
 const path = require('path')
+const fs = require('fs')
 
 /**
  * Set `__static` path to static files in production
@@ -38,6 +39,77 @@ function cleanupPythonProcess() {
     }
 }
 
+// 获取Python环境路径
+function getPythonPaths() {
+    const isDev = process.env.NODE_ENV === 'development';
+    let backendDir, pythonScriptPath, pythonPath;
+    
+    if (isDev) {
+        // 开发环境下的路径
+        backendDir = path.resolve(path.join(__dirname, '../../backend'));
+        pythonScriptPath = path.join(backendDir, 'main.py');
+        
+        if (process.platform === 'linux' || process.platform === 'darwin') {
+            // Linux/macOS开发环境
+            pythonPath = path.join(backendDir, 'player_linux', 'bin', 'python3');
+        } else {
+            // Windows开发环境
+            pythonPath = path.join(backendDir, 'player', 'Scripts', 'python.exe');
+        }
+    } else {
+        // 生产环境下的路径 - 从资源目录中加载
+        const resourcesDir = process.resourcesPath;
+        backendDir = path.join(resourcesDir, 'backend');
+        pythonScriptPath = path.join(backendDir, 'main.py');
+        
+        if (process.platform === 'linux' || process.platform === 'darwin') {
+            // Linux/macOS生产环境
+            pythonPath = path.join(backendDir, 'player_linux', 'bin', 'python3');
+        } else {
+            // Windows生产环境
+            pythonPath = path.join(backendDir, 'player', 'Scripts', 'python.exe');
+        }
+    }
+    
+    console.log('后端目录路径:', backendDir);
+    console.log('Python脚本路径:', pythonScriptPath);
+    console.log('Python解释器路径:', pythonPath);
+    
+    // 检查文件是否存在
+    if (!fs.existsSync(pythonPath)) {
+        console.error(`Python解释器不存在: ${pythonPath}`);
+    }
+    if (!fs.existsSync(pythonScriptPath)) {
+        console.error(`Python脚本不存在: ${pythonScriptPath}`);
+    }
+    
+    return { backendDir, pythonScriptPath, pythonPath };
+}
+
+// 获取数据库存储路径
+function getDatabasePath() {
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    if (isDev) {
+        // 开发环境下存储在项目目录
+        return path.join(__dirname, '../../player.db');
+    }
+    
+    if (process.platform === 'linux') {
+        // Linux 系统下，检查是否是 AppImage
+        if (process.env.APPIMAGE) {
+            // AppImage 模式下，存储在 AppImage 同级目录
+            return path.join(path.dirname(process.env.APPIMAGE), 'player.db');
+        } else {
+            // 普通 Linux 安装模式下，存储在应用数据目录
+            return path.join(app.getPath('userData'), 'player.db');
+        }
+    } else {
+        // Windows 和 macOS 下存储在应用数据目录
+        return path.join(app.getPath('userData'), 'player.db');
+    }
+}
+
 function createWindow() {
     /**
      * Initial window options
@@ -64,60 +136,13 @@ function createWindow() {
         cleanupPythonProcess()
         
         // 获取数据库路径
-        const userDataPath = app.getPath('userData');
-        const dbPath = path.join(userDataPath, 'player.db');
+        const dbPath = getDatabasePath();
         
         console.log('启动Python程序，数据库路径：', dbPath)
         
         try {
-            // 启动Python脚本
-            let pythonPath;
-            let pythonScriptPath;
-            
-            if (process.env.NODE_ENV === 'development') {
-                // 开发环境下的路径
-                const backendDir = path.resolve(path.join(__dirname, '../../backend'));
-                pythonScriptPath = path.join(backendDir, 'main.py');
-                pythonPath = path.join(backendDir, 'player', 'Scripts', 'python.exe');
-                
-                // 输出绝对路径用于调试
-                console.log('后端目录绝对路径:', backendDir);
-                console.log('Python脚本绝对路径:', pythonScriptPath);
-                console.log('Python解释器绝对路径:', pythonPath);
-                
-                // 检查文件是否存在
-                const fs = require('fs');
-                if (!fs.existsSync(pythonPath)) {
-                    console.error(`Python解释器不存在: ${pythonPath}`);
-                }
-                if (!fs.existsSync(pythonScriptPath)) {
-                    console.error(`Python脚本不存在: ${pythonScriptPath}`);
-                }
-            } else {
-                // 生产环境下的路径 - 从资源目录中加载
-                const resourcesDir = process.resourcesPath;
-                // 后端资源路径
-                const backendDir = path.join(resourcesDir, 'backend');
-                pythonScriptPath = path.join(backendDir, 'main.py');
-                pythonPath = path.join(backendDir, 'player', 'Scripts', 'python.exe');
-                
-                console.log('生产环境后端目录:', backendDir);
-                console.log('Python脚本路径:', pythonScriptPath);
-                console.log('Python解释器路径:', pythonPath);
-                
-                // 确保文件存在
-                try {
-                    const fs = require('fs');
-                    if (!fs.existsSync(pythonPath)) {
-                        console.error(`生产环境Python解释器不存在: ${pythonPath}`);
-                    }
-                    if (!fs.existsSync(pythonScriptPath)) {
-                        console.error(`生产环境Python脚本不存在: ${pythonScriptPath}`);
-                    }
-                } catch (err) {
-                    console.error('检查文件存在时出错:', err);
-                }
-            }
+            // 获取Python环境路径
+            const { pythonScriptPath, pythonPath } = getPythonPaths();
             
             // 启动Python进程
             pythonProcess = spawn(pythonPath, [

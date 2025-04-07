@@ -421,7 +421,7 @@ class MusicMetadataService {
       
       // 发送请求
       const response = await axios.get(url, {
-        timeout: 5000 // 5秒超时
+        timeout: 20000 // 20秒超时
       });
       
       // 检查响应
@@ -456,7 +456,7 @@ class MusicMetadataService {
       
       // 先发送HEAD请求检查响应类型
       const headResponse = await axios.head(url, {
-        timeout: 3000,
+        timeout: 20000,
         maxRedirects: 0 // 不自动跟随重定向
       });
       
@@ -480,7 +480,7 @@ class MusicMetadataService {
       // 如果不是重定向也不是图片，则尝试获取二进制数据并转为base64
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
-        timeout: 5000
+        timeout: 20000
       });
       
       if (response.status === 200) {

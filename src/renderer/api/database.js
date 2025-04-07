@@ -2,10 +2,34 @@ const path = require('path');
 const electron = require('electron');
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
+const os = require('os');
 
-// 获取用户数据目录，确保跨平台兼容性
-const userDataPath = (electron.app || electron.remote.app).getPath('userData');
-const dbPath = path.join(userDataPath, 'player.db');
+// 获取数据库存储路径
+function getDatabasePath() {
+  const app = electron.app || electron.remote.app;
+  const isDev = process.env.NODE_ENV === 'development';
+  
+  if (isDev) {
+    // 开发环境下存储在项目目录
+    return path.join(__dirname, '..', '..', '..', 'player.db');
+  }
+  
+  if (process.platform === 'linux') {
+    // Linux 系统下，检查是否是 AppImage
+    if (process.env.APPIMAGE) {
+      // AppImage 模式下，存储在 AppImage 同级目录
+      return path.join(path.dirname(process.env.APPIMAGE), 'player.db');
+    } else {
+      // 普通 Linux 安装模式下，存储在应用数据目录
+      return path.join(app.getPath('userData'), 'player.db');
+    }
+  } else {
+    // Windows 和 macOS 下存储在应用数据目录
+    return path.join(app.getPath('userData'), 'player.db');
+  }
+}
+
+const dbPath = getDatabasePath();
 
 // 创建数据库连接
 let db;
