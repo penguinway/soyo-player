@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sqlite3
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity

@@ -1,6 +1,6 @@
 {
   "name": "soyo-player",
-  "version": "1.4.2",
+  "version": "1.4.5",
   "author": "penguinway <penguinloveyousa@163.com>",
   "description": "长崎速逝音视频播放器",
   "license": "MIT",
@@ -15,7 +15,8 @@
     "build:linux:deb": "cross-env BUILD_TARGET_PLATFORM=linux && node .electron-vue/build.js && electron-builder --linux deb --x64",
     "build:linux:appimage": "cross-env BUILD_TARGET_PLATFORM=linux && node .electron-vue/build.js && electron-builder --linux AppImage --x64",
     "build:win": "cross-env BUILD_TARGET_PLATFORM=win32 && node .electron-vue/build.js && electron-builder --win --x64",
-    "build:backend": "node scripts/prepare-backend.js",
+    "build:linux:backend": "cross-env BUILD_TARGET_PLATFORM=linux node scripts/prepare-backend.js",
+    "build:win:backend": "cross-env BUILD_TARGET_PLATFORM=win32 node scripts/prepare-backend.js",
     "prebuild": "",
     "dev": "node .electron-vue/dev-runner.js",
     "pack": "npm run pack:main && npm run pack:renderer",
@@ -28,6 +29,7 @@
   "build": {
     "productName": "soyo-Player",
     "appId": "soyo_player",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import Flask, jsonify, request
 from datetime import datetime
 from musicnn.tagger import top_tags
