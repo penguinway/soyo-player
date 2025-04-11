@@ -1,0 +1,2 @@
+model_checkpoint_path: "multimodal_model_6way.ckpt"
+all_model_checkpoint_paths: "multimodal_model_6way.ckpt"
