@@ -551,7 +551,13 @@ export default {
     },
     // 调试日志方法
     debugLog(message) {
-      const timestamp = new Date().toLocaleTimeString();
+      // 使用不依赖时区的时间格式化
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const timestamp = `${hours}:${minutes}:${seconds}`;
+      
       const logMessage = `[${timestamp}] ${message}`;
       console.log(logMessage);
       this.debugInfo = logMessage + '\n' + this.debugInfo;
