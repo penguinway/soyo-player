@@ -71,6 +71,25 @@
           </div>
         </div>
       </div>
+      
+      <!-- 搜索框部分 -->
+      <div class="search-container" v-show="videoList.length > 0">
+        <div class="search-box">
+          <span class="fa-solid fa-search search-icon"></span>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            :placeholder="$t('common.searchPlaylist')" 
+            @input="handleSearch"
+          />
+          <span 
+            v-if="searchQuery" 
+            class="fa-solid fa-times clear-icon" 
+            @click="clearSearch"
+          ></span>
+        </div>
+      </div>
+      
       <transition name="router" mode="out-in">
         <ul
           :style="{'background-color': theme.bgColor}"
@@ -101,13 +120,13 @@
       <div
         @contextmenu.stop="contextmenu"
         class="list-content"
-        :style="{'height':`${playListHeight-40}px`}"
+        :style="{'height':`${playListHeight-40-(videoList.length > 0 ? 50 : 0)}px`}"
       >
         <div style="padding-bottom: 10px;">
           <ListItem
             @contextmenu="itemContextmenu(video)"
             :item="video"
-            v-for="(video,index) in videoList"
+            v-for="(video,index) in filteredVideoList"
             :key="index"
           />
         </div>
@@ -158,7 +177,11 @@ export default {
       // 是否锁定播放列表
       isLock: isLock,
       // 定时器时间
-      time: 1500
+      time: 1500,
+      // 搜索查询
+      searchQuery: "",
+      // 搜索防抖定时器
+      searchDebounceTimer: null
     };
   },
   mounted() {
@@ -549,6 +572,23 @@ export default {
           submenu: sortArr
         }
       ];
+    },
+    // 处理搜索输入
+    handleSearch() {
+      // 清除之前的定时器
+      if (this.searchDebounceTimer) {
+        clearTimeout(this.searchDebounceTimer);
+      }
+      
+      // 设置新的定时器（防抖处理）
+      this.searchDebounceTimer = setTimeout(() => {
+        // 搜索逻辑在计算属性中处理
+        // 这里可以添加额外的处理逻辑，如跟踪用户搜索历史等
+      }, 300);
+    },
+    // 清除搜索
+    clearSearch() {
+      this.searchQuery = "";
     }
   },
   computed: {
@@ -580,6 +620,41 @@ export default {
         { title: this.$t("common.randomSort"), soreMode: 4 },
         { title: this.$t("common.nameSort"), soreMode: 5 }
       ];
+    },
+    // 过滤后的视频列表
+    filteredVideoList() {
+      if (!this.searchQuery.trim()) {
+        return this.videoList;
+      }
+      
+      const query = this.searchQuery.toLowerCase().trim();
+      
+      return this.videoList.filter(video => {
+        // 获取文件名（从路径中提取）
+        const fileName = path.basename(video.src).toLowerCase();
+        
+        // 根据文件名搜索
+        if (fileName.includes(query)) {
+          return true;
+        }
+        
+        // 如果视频有标题属性，也搜索标题
+        if (video.title && video.title.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // 如果有艺术家属性（音乐文件通常有），也搜索艺术家
+        if (video.artist && video.artist.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // 如果有标签属性，搜索标签
+        if (video.tags && Array.isArray(video.tags)) {
+          return video.tags.some(tag => tag.toLowerCase().includes(query));
+        }
+        
+        return false;
+      });
     }
   },
   watch: {
@@ -748,6 +823,65 @@ export default {
       
       > .delete {
         font-size: 14px;
+      }
+    }
+  }
+  
+  /* 搜索框样式 */
+  .search-container {
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(80, 80, 80, 0.2);
+    
+    .search-box {
+      position: relative;
+      width: 100%;
+      height: 36px;
+      
+      .search-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: @text-secondary;
+        font-size: 14px;
+      }
+      
+      .clear-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: @text-secondary;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 5px;
+        
+        &:hover {
+          color: @primary-color;
+        }
+      }
+      
+      input {
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 18px;
+        color: @text-color;
+        padding: 0 35px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        
+        &:focus {
+          background-color: rgba(255, 255, 255, 0.15);
+          border-color: rgba(93, 238, 0, 0.5);
+          box-shadow: 0 0 0 2px rgba(93, 238, 0, 0.2);
+          outline: none;
+        }
+        
+        &::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+        }
       }
     }
   }

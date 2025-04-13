@@ -10,7 +10,7 @@ const fs = require('fs')
  * https://simulatedgreg.gitbooks.io/electron-vue/content/en/using-static-assets.html
  */
 if (process.env.NODE_ENV !== 'development') {
-    global.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
+    global.__static = path.join(__dirname, '/static').replace(/\\/g, '\\\\')
 }
 
 let mainWindow
@@ -115,9 +115,9 @@ function createWindow() {
      * Initial window options
      */
     mainWindow = new BrowserWindow({
-        height: 589,
+        height: 650,
         useContentSize: true,
-        width: 866,
+        width: 900,
         minWidth: 760,
         minHeight: 550,
         webPreferences: {
@@ -129,6 +129,11 @@ function createWindow() {
     })
 
     mainWindow.loadURL(winURL)
+
+    // 在生产环境中也自动打开开发者工具，用于调试界面问题
+    // if (process.env.NODE_ENV !== 'development') {
+    //     mainWindow.webContents.openDevTools()
+    // }
 
     // 在窗口加载完成后启动Python后端
     mainWindow.webContents.on('did-finish-load', () => {
@@ -142,12 +147,35 @@ function createWindow() {
         
         try {
             // 获取Python环境路径
-            const { pythonScriptPath, pythonPath } = getPythonPaths();
+            const { backendDir, pythonScriptPath, pythonPath } = getPythonPaths();
+            
+            // 检查路径是否存在
+            if (!fs.existsSync(backendDir)) {
+                console.error(`后端目录不存在: ${backendDir}`);
+                return;
+            }
+            
+            // 设置BERT模型和情感模型的绝对路径
+            const bertModelPath = path.join(backendDir, 'bert-base-uncased');
+            const emotionModelPath = path.join(backendDir, 'checkpoints/iemocap/multimodal_model_6way');
+            
+            // 检查模型路径是否存在
+            if (!fs.existsSync(bertModelPath)) {
+                console.error(`BERT模型路径不存在: ${bertModelPath}`);
+            }
+            if (!fs.existsSync(emotionModelPath)) {
+                console.error(`情感模型路径不存在: ${emotionModelPath}`);
+            }
+            
+            console.log('BERT模型路径：', bertModelPath);
+            console.log('情感模型路径：', emotionModelPath);
             
             // 启动Python进程
             pythonProcess = spawn(pythonPath, [
                 pythonScriptPath,
-                `-db_path=${dbPath}`
+                `-db_path=${dbPath}`,
+                `-bert_path=${bertModelPath}`,
+                `-model_path=${emotionModelPath}`
             ], {
                 detached: false,
                 windowsHide: true
@@ -259,10 +287,12 @@ app.on('activate', () => {
 
 // 添加IPC事件，允许渲染进程请求重启Python进程
 ipcMain.on('restart-python', () => {
-    if (mainWindow) {
+    if (mainWindow && mainWindow.webContents) {
         cleanupPythonProcess()
         // 触发did-finish-load事件处理程序中的代码来重启Python
         mainWindow.webContents.emit('did-finish-load')
+    } else {
+        console.error('无法重启Python进程：mainWindow或webContents未定义')
     }
 })
 
